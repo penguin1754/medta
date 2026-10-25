@@ -120,7 +120,36 @@ h1,h2,h3{font-family:"Songti SC","SimSun","宋体",serif !important;font-weight:
   animation:panelIn .38s var(--ease) both}
 [data-testid="stAlert"]{animation:softIn .32s var(--ease) both}
 [data-testid="stChatMessage"]{animation:noteIn .34s var(--ease) both}
-.card-front{animation:pageTurn .52s var(--ease) both}
+/* 翻牌：两张面同占一格，整块绕 Y 轴翻过去，高度自动取较高的一面 */
+.flipwrap{display:grid;perspective:1600px;position:relative;margin:.1rem 0 .5rem;
+  transform-style:preserve-3d}
+.flipwrap::before,.flipwrap::after{content:"";position:absolute;inset:0;z-index:-1;
+  background:var(--tint);border:1px solid #EDEBE2;border-radius:4px}
+.flipwrap::before{transform:translateY(8px) scaleX(.986)}
+.flipwrap::after{transform:translateY(15px) scaleX(.972);opacity:.72}
+.flipwrap:not(.flipped){animation:cardIn .42s var(--ease) both}
+.flipwrap.flipped{transform:perspective(1600px) rotateY(180deg);
+  animation:flipToBack .56s var(--ease) both}
+@keyframes flipToBack{
+  from{transform:perspective(1600px) rotateY(0)}
+  to{transform:perspective(1600px) rotateY(180deg)}}
+@keyframes cardIn{from{opacity:0;transform:translateY(14px) scale(.982)}
+  to{opacity:1;transform:none}}
+.face{grid-area:1 / 1;display:flex;flex-direction:column;justify-content:center;gap:14px;
+  min-height:250px;background:var(--card);border:1px solid var(--line);border-radius:4px;
+  padding:30px 34px;text-align:left;color:var(--ink);
+  box-shadow:0 3px 10px -4px rgba(25,26,23,.16);
+  backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.face.back{transform:rotateY(-180deg);justify-content:flex-start}
+.face-tag{align-self:flex-start;font-size:12px;letter-spacing:.08em;color:var(--art);
+  background:#F7E8E4;border-radius:2px;padding:4px 10px;line-height:1.3}
+.face.back .face-tag{color:var(--vein);background:#E7EEF5}
+.face.front .face-text{font-family:"Songti SC","SimSun",serif;font-size:27px;line-height:1.72}
+.face.back .face-text{font-size:15.5px;line-height:1.95;color:var(--ink2)}
+.face.back .face-text p{margin:0 0 .7rem}
+.face-src{border-left:2px solid var(--vein);background:#E7EEF5;padding:.5rem .8rem;
+  font-size:12.5px;color:var(--ink2);margin-top:.2rem}
+.face-hint{font-size:11.5px;color:var(--mute);letter-spacing:.04em}
 .cite-box{animation:softIn .34s var(--ease) .1s both}
 [data-testid="stMetric"]{animation:panelIn .42s var(--ease) both}
 [data-testid="stProgress"] [role="progressbar"] > div{transform-origin:left;animation:barGrow .8s var(--ease) both}
@@ -230,6 +259,35 @@ def page_ask():
         st.rerun()
 
 
+def _flip_card_html(card, revealed):
+    """整张卡一次渲染出正反两面，靠 CSS 三维翻转过去；高度由较高的一面决定。"""
+    src = card.get("source") or {}
+    src_line = html.escape(str(src.get("doc") or ""))
+    if src.get("locator"):
+        src_line += " · " + html.escape(str(src.get("locator")))
+    body = [
+        "<p>" + html.escape(part.strip()) + "</p>"
+        for part in str(card["answer"]).split("\n")
+        if part.strip()
+    ]
+    cls = "flipwrap flipped" if revealed else "flipwrap"
+    return (
+        '<div class="' + cls + '">'
+        '<div class="face front">'
+        '<span class="face-tag">' + html.escape(card["chapter"]) + " · "
+        + html.escape(card["topic"]) + "</span>"
+        '<div class="face-text">' + html.escape(card["front"]) + "</div>"
+        '<span class="face-hint">先自己回忆一遍，再翻面核对</span>'
+        "</div>"
+        '<div class="face back">'
+        '<span class="face-tag">答案</span>'
+        '<div class="face-text">' + "".join(body) + "</div>"
+        '<div class="face-src">出处　' + src_line + "</div>"
+        "</div>"
+        "</div>"
+    )
+
+
 def page_cards():
     sid = _sid()
     st.markdown('<div class="panel-kicker">02 / 速记</div>', unsafe_allow_html=True)
@@ -254,19 +312,13 @@ def page_cards():
     state = core.STORE.sched_state(sid, card["id"])
     st.caption("第 " + str(idx + 1) + " / " + str(len(deck)) + " 张　当前状态：" + state["status"])
     with st.container(border=True, key="cardbox"):
-        st.caption(card["chapter"] + " · " + card["topic"])
-        st.markdown('<div class="card-front">' + html.escape(card["front"]) + "</div>",
-                    unsafe_allow_html=True)
-        if not st.session_state.get("revealed"):
-            if st.button("翻面看答案", type="primary", key="flip"):
+        revealed = bool(st.session_state.get("revealed"))
+        st.markdown(_flip_card_html(card, revealed), unsafe_allow_html=True)
+        if not revealed:
+            if st.button("翻面看答案", type="primary", key="flip", use_container_width=True):
                 st.session_state.revealed = True
                 st.rerun()
         else:
-            st.markdown(card["answer"])
-            src = card.get("source") or {}
-            st.markdown('<div class="cite-box"><b>出处</b>　' + html.escape(str(src.get("doc") or ""))
-                        + (" · " + html.escape(str(src.get("locator"))) if src.get("locator") else "")
-                        + "</div>", unsafe_allow_html=True)
             a, b = st.columns(2)
             if a.button("记住了", type="primary", key="known", use_container_width=True):
                 core.STORE.review_card(sid, card, True)
@@ -276,6 +328,9 @@ def page_cards():
             if b.button("没记住", key="unknown", use_container_width=True):
                 core.STORE.review_card(sid, card, False)
                 st.session_state.card_i = idx + 1
+                st.session_state.revealed = False
+                st.rerun()
+            if st.button("翻回正面", key="unflip"):
                 st.session_state.revealed = False
                 st.rerun()
 
