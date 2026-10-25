@@ -55,6 +55,7 @@ CSS = """
   --ground:#E8E6DF; --paper:#FCFBF7; --card:#FFFFFF; --tint:#F3F1E9;
   --ink:#191A17; --ink2:#3B3D37; --mute:#6C6E63;
   --line:#DCD9CE; --art:#B3352A; --vein:#2F5B82;
+  --ease:cubic-bezier(.2,.7,.3,1);
 }
 [data-testid="stAppViewContainer"]{background:var(--ground);}
 [data-testid="stHeader"]{background:transparent;}
@@ -99,6 +100,54 @@ h1,h2,h3{font-family:"Songti SC","SimSun","宋体",serif !important;font-weight:
 [data-testid="stMetricValue"]{font-family:"Songti SC","SimSun",serif;font-weight:400;}
 [data-testid="stVerticalBlockBorderWrapper"]{border-color:var(--line) !important;
   background:var(--card);border-radius:3px;}
+/* ══ 动效层：全部挂在真实状态变化上 ══════════════════════════ */
+@keyframes softIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+@keyframes panelIn{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+@keyframes pageTurn{from{opacity:0;transform:perspective(900px) rotateX(9deg) translateY(10px)}to{opacity:1;transform:none}}
+@keyframes stampIn{from{opacity:0;transform:rotate(-8deg) scale(1.55)}to{opacity:1;transform:rotate(-8deg) scale(1)}}
+@keyframes cellIn{from{opacity:0;transform:scale(.55)}to{opacity:1;transform:none}}
+@keyframes noteIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes barGrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes ringDraw{from{stroke-dashoffset:289}}
+
+.hero-kicker{animation:softIn .46s var(--ease) both}
+.hero-title{animation:softIn .58s var(--ease) .06s both}
+.hero-lede{animation:softIn .58s var(--ease) .12s both}
+.rule{animation:softIn .5s var(--ease) .2s both}
+.panel-kicker{animation:softIn .4s var(--ease) both}
+[data-testid="stVerticalBlockBorderWrapper"]{animation:panelIn .38s var(--ease) both}
+.st-key-cardbox,.st-key-quizbox{background:var(--card);border-radius:3px;
+  animation:panelIn .38s var(--ease) both}
+[data-testid="stAlert"]{animation:softIn .32s var(--ease) both}
+[data-testid="stChatMessage"]{animation:noteIn .34s var(--ease) both}
+.card-front{animation:pageTurn .52s var(--ease) both}
+.cite-box{animation:softIn .34s var(--ease) .1s both}
+[data-testid="stMetric"]{animation:panelIn .42s var(--ease) both}
+[data-testid="stProgress"] [role="progressbar"] > div{transform-origin:left;animation:barGrow .8s var(--ease) both}
+.stButton>button{transition:background .18s,border-color .18s,color .18s,transform .12s,box-shadow .2s}
+.stButton>button:hover{transform:translateY(-1px);box-shadow:0 6px 16px -10px rgba(20,22,18,.6)}
+.stButton>button:active{transform:translateY(1px) scale(.985)}
+[data-testid="stSidebar"] [role="radiogroup"] label{transition:background .18s,transform .12s}
+[data-testid="stSidebar"] [role="radiogroup"] label:active{transform:translateY(1px)}
+.verdict{display:inline-flex;align-items:center;gap:.55rem;margin:.2rem 0 .7rem;font-size:13.5px;letter-spacing:.04em}
+.verdict i{font-family:"Songti SC","SimSun",serif;font-style:normal;font-size:15px;width:30px;height:30px;
+  display:grid;place-items:center;border:1.5px solid currentColor;border-radius:2px;
+  transform:rotate(-8deg);animation:stampIn .36s var(--ease) .08s both}
+.verdict.ok{color:var(--vein)}
+.verdict.bad{color:var(--art)}
+.heat{display:flex;gap:4px;flex-wrap:wrap;margin:.4rem 0 .2rem}
+.heat i{width:15px;height:15px;border-radius:2px;background:#EDEBE2;display:block;animation:cellIn .34s var(--ease) both}
+.heat i.l1{background:#DCE4EC}
+.heat i.l2{background:#AFC4D6}
+.heat i.l3{background:#6E93B4}
+.heat i.l4{background:var(--vein)}
+.heat-legend{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--mute);margin-top:.45rem}
+.heat-legend b{width:11px;height:11px;border-radius:2px;background:var(--vein);display:block}
+.ring-wrap{display:flex;align-items:center;gap:1.2rem;margin:.2rem 0 .9rem}
+.ring-num{font-family:"Songti SC","SimSun",serif;font-size:34px;line-height:1}
+.ring-cap{font-size:11px;letter-spacing:.18em;color:var(--mute);margin-top:.4rem}
+.ring-arc{animation:ringDraw 1.1s var(--ease) both}
+@media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important}}
 </style>
 """
 st.markdown(CSS, unsafe_allow_html=True)
@@ -204,7 +253,7 @@ def page_cards():
     card = deck[idx]
     state = core.STORE.sched_state(sid, card["id"])
     st.caption("第 " + str(idx + 1) + " / " + str(len(deck)) + " 张　当前状态：" + state["status"])
-    with st.container(border=True):
+    with st.container(border=True, key="cardbox"):
         st.caption(card["chapter"] + " · " + card["topic"])
         st.markdown('<div class="card-front">' + html.escape(card["front"]) + "</div>",
                     unsafe_allow_html=True)
@@ -256,7 +305,7 @@ def page_quiz():
     i = st.session_state.quiz_i % len(items)
     q = items[i]
     st.caption("第 " + str(i + 1) + " / " + str(len(items)) + " 题 · " + q["chapter"])
-    with st.container(border=True):
+    with st.container(border=True, key="quizbox"):
         st.markdown("### " + q["stem"])
         labels = ["ABCDEF"[k] + ". " + opt for k, opt in enumerate(q["options"])]
         choice = st.radio("选择一个答案", list(range(len(q["options"]))),
@@ -268,9 +317,12 @@ def page_quiz():
         result = st.session_state.get("quiz_result")
         if result and result.get("qid") == q["id"]:
             if result["ok"]:
-                st.success("答对了。")
+                st.markdown('<div class="verdict ok"><i>对</i><span>答对了</span></div>',
+                            unsafe_allow_html=True)
             else:
-                st.error("答错了，正确答案是 " + "ABCDEF"[q["answer_index"]] + "。")
+                st.markdown('<div class="verdict bad"><i>误</i><span>答错了，正确答案是 '
+                            + "ABCDEF"[q["answer_index"]] + "。</span></div>",
+                            unsafe_allow_html=True)
             st.markdown(q["explain"])
             src = q.get("source") or {}
             st.markdown('<div class="cite-box"><b>出处</b>　' + html.escape(str(src.get("doc") or ""))
@@ -294,6 +346,15 @@ def page_profile():
     b.metric("自测正确率", str(o["accuracy"]) + "%")
     c.metric("待复习", str(o["due"]))
     d.metric("连续学习", str(o["streak"]) + " 天")
+    pct = int(round(100 * o["mastered"] / max(1, o["cards_total"])))
+    off = round(289 * (1 - pct / 100.0), 1)
+    st.markdown('<div class="ring-wrap"><svg width="104" height="104" viewBox="0 0 110 110">'
+                '<circle cx="55" cy="55" r="46" fill="none" stroke="#EDEBE2" stroke-width="7"/>'
+                '<circle class="ring-arc" cx="55" cy="55" r="46" fill="none" stroke="#2F5B82"'
+                ' stroke-width="7" stroke-linecap="round" stroke-dasharray="289"'
+                ' stroke-dashoffset="' + str(off) + '" transform="rotate(-90 55 55)"/></svg>'
+                '<div><div class="ring-num">' + str(pct) + '%</div>'
+                '<div class="ring-cap">今日掌握度</div></div></div>', unsafe_allow_html=True)
     st.markdown("### 章节掌握度")
     for ch in prof["chapters"]:
         st.progress(ch["rate"] / 100.0, text=ch["chapter"] + "　" + str(ch["mastered"]) + "/" + str(ch["total"]))
@@ -304,7 +365,19 @@ def page_profile():
     else:
         st.success("暂时没有待补的知识缺口。")
     st.markdown("### 最近 35 天学习活跃度")
-    st.bar_chart({x["date"]: x["n"] for x in prof["activity"]}, height=180)
+    acts = prof["activity"]
+    if acts:
+        cells = []
+        for k, x in enumerate(acts):
+            n = int(x["n"])
+            lvl = 0 if n <= 0 else 1 if n <= 2 else 2 if n <= 5 else 3 if n <= 9 else 4
+            cells.append('<i class="l' + str(lvl) + '" style="animation-delay:'
+                         + str(round(k * 0.012, 3)) + 's" title="' + x["date"] + " · "
+                         + str(n) + ' 次"></i>')
+        st.markdown('<div class="heat">' + "".join(cells) + "</div>", unsafe_allow_html=True)
+        st.markdown('<div class="heat-legend"><b></b><span>' + acts[0]["date"][5:]
+                    + " 至 " + acts[-1]["date"][5:]
+                    + "　颜色越深，当天练习越多</span></div>", unsafe_allow_html=True)
     with st.expander("资料来源与合规说明"):
         st.write("当前内容为占位示例，正式提交前必须替换为团队审核后的系统解剖学资料。"
                  "系统不采集姓名与学号，也不访问学校任何系统。")
