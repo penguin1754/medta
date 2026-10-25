@@ -1,0 +1,11 @@
+# 凭据与运行产物，禁止进仓库
+.env
+db/
+__pycache__/
+*.pyc
+.streamlit/secrets.toml
+.venv/
+*.log
+
+# 原始扫描件体积大且为第三方资料，不入库
+data_in/*.pdf

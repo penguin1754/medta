@@ -1,0 +1,1339 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#eef0ea">
+<link rel="icon" href="data:,">
+<title>医学课程 AI 助教 · 系统解剖学</title>
+<style>/* ══════════════════════════════════════════════════════════════════
+   视觉系统 v3 · 暗室灯箱 / 一叠卡
+   目标用户：期末前的医学生，笔记本为主，怕忘，要证据。
+   版面逻辑：顶栏是设备,纸面是工作台,卡片是学习对象。
+   颜色只用解剖图谱的既有约定：动脉红=问题与错误，静脉蓝=来源与正确，
+   骨白=次要表面。没有第四种强调色。
+   ══════════════════════════════════════════════════════════════════ */
+:root{
+  color-scheme:light;
+  --ground:#E8E6DF;
+  --paper:#FCFBF7; --card:#FFFFFF; --tint:#F3F1E9;
+  --ink:#191A17; --ink-2:#3B3D37; --mute:#6C6E63;
+  --line:#DCD9CE; --line-2:#EDEBE2;
+  --art:#B3352A; --art-soft:#F7E8E4;
+  --vein:#2F5B82; --vein-soft:#E7EEF5;
+  --bar:#171A18; --bar-ink:#EAE8DF; --bar-mute:#98A094;
+  --fs:"FangSong","STFangsong","仿宋","FangSong_GB2312",serif;
+  --song:"Songti SC","SimSun","宋体",serif;
+  --hei:"Microsoft YaHei","PingFang SC","Hiragino Sans GB","Noto Sans SC",sans-serif;
+  --ease:cubic-bezier(.2,.7,.3,1);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font:400 16px/1.85 var(--hei)}
+::selection{background:#EFD9D4;color:var(--ink)}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+button,a,input,select,label,summary{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.hidden{display:none !important}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:-9999px}
+.skip:focus{left:16px;top:16px;background:var(--paper);padding:10px 14px;z-index:40;
+  border:1px solid var(--ink);color:var(--ink)}
+
+/* ── 顶栏：设备条 ─────────────────────────────────────────── */
+.app{display:block;position:relative}
+.app::before{content:"";position:absolute;left:0;right:0;top:0;height:70vh;pointer-events:none;
+  background:radial-gradient(120% 90% at 50% 0%,rgba(255,241,219,.62) 0%,rgba(255,241,219,0) 62%);
+  z-index:0}
+.rail{position:relative;z-index:2}
+.rail{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:26px;
+  min-height:58px;padding:0 26px;background:var(--bar);color:var(--bar-ink)}
+.brand{display:flex;align-items:baseline;gap:11px;flex:0 0 auto}
+.brand h1{margin:0;font-family:var(--fs);font-weight:400;font-size:19px;line-height:1.2;
+  letter-spacing:.09em;color:#F6F4EA}
+.brand-sub{margin:0;font-size:11.5px;letter-spacing:.16em;color:var(--bar-mute)}
+.index{margin-left:auto;display:flex;align-items:center;gap:2px}
+.index-head{display:none}
+.index ol{list-style:none;margin:0;padding:0;display:flex;gap:2px}
+.nav-btn{display:flex;align-items:baseline;gap:7px;background:none;border:0;cursor:pointer;
+  font:400 14px/1 var(--hei);letter-spacing:.02em;color:var(--bar-mute);
+  padding:9px 13px 8px;border-radius:2px;position:relative}
+.nav-btn .num{font-family:var(--fs);font-size:12px;opacity:.72}
+.nav-btn:hover{color:#F6F4EA;background:rgba(255,255,255,.07)}
+.nav-btn.on{color:#F6F4EA}
+.nav-btn::after{content:"";position:absolute;left:13px;right:13px;bottom:2px;height:2px;
+  background:#8B938A;transform:scaleX(0);transform-origin:left;
+  transition:transform .24s var(--ease),background .2s}
+.nav-btn:hover::after{transform:scaleX(1)}
+.nav-btn.on::after{transform:scaleX(1);background:#CE6252}
+
+/* ── 纸面 ─────────────────────────────────────────────────── */
+main{background:var(--paper);width:100%;max-width:984px;margin:0 auto 40px;
+  padding:48px 60px 44px;min-height:calc(100vh - 98px);
+  border-radius:0 0 3px 3px;
+  box-shadow:0 1px 0 rgba(0,0,0,.05),0 22px 60px -18px rgba(20,22,18,.35);
+  animation:sheetIn .46s var(--ease) both}
+@keyframes sheetIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.panel{max-width:100%}
+.panel-head{margin-bottom:34px}
+.panel-head h2{font-family:var(--fs);font-weight:400;font-size:40px;line-height:1.26;
+  margin:0;letter-spacing:.02em;text-wrap:balance}
+.ord{display:none}
+.lede{margin:12px 0 0;font-size:15px;line-height:1.85;color:var(--mute);max-width:33em}
+
+/* ── 今日复习处方：钉在纸面顶部的一张便条 ─────────────────── */
+.masthead{background:var(--tint);border:1px solid var(--line-2);border-radius:3px;
+  padding:22px 26px;margin:0 0 40px;
+  display:grid;grid-template-columns:1fr auto;column-gap:34px;align-items:start;
+  animation:noteIn .5s var(--ease) .08s both}
+@keyframes noteIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.masthead:empty{display:none}
+.mh-date{grid-column:1/-1;margin:0;font-size:12px;letter-spacing:.05em;color:var(--mute)}
+.mh-order{grid-column:1/-1;margin:7px 0 6px;font-family:var(--fs);font-size:23px;
+  line-height:1.4;letter-spacing:.06em;color:var(--ink)}
+.mh-line{grid-column:1;margin:0;font-size:17px;line-height:1.8;max-width:26em}
+.mh-line b{font-family:var(--fs);font-size:1.32em;line-height:1;color:var(--art);padding:0 2px}
+.mh-meta{grid-column:1;margin:9px 0 0;font-size:12.5px;color:var(--mute);
+  font-variant-numeric:tabular-nums}
+.mh-actions{grid-column:2;grid-row:3 / span 2;align-self:center;display:flex;
+  flex-direction:column;gap:8px;align-items:stretch}
+
+/* ── 表单：一个输入行 ─────────────────────────────────────── */
+.form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end;max-width:44em}
+.form label{grid-column:1/-1;font-size:12.5px;color:var(--mute);margin-bottom:-4px}
+input[type=text],select{font:inherit;font-size:15.5px;color:var(--ink);
+  background:var(--card);border:1px solid var(--line);border-radius:3px;padding:11px 14px}
+input[type=text]{width:100%}
+input[type=text]::placeholder{color:#9C9E92}
+input[type=text]:focus,select:focus{border-color:var(--ink);outline:2px solid rgba(25,26,23,.14)}
+select{cursor:pointer;min-width:9em}
+.form .row{grid-column:2;margin:0;display:block}
+
+.btn{font:400 15px/1.1 var(--hei);letter-spacing:.02em;background:var(--art);color:#FFF8F5;
+  border:1px solid var(--art);border-radius:3px;padding:11px 20px;cursor:pointer;
+  transition:background .18s,border-color .18s}
+.btn:hover:not(:disabled){background:#9A2A20;border-color:#9A2A20}
+.btn.ghost{background:transparent;color:var(--ink-2);border-color:var(--line)}
+.btn.ghost:hover:not(:disabled){background:var(--tint);color:var(--ink);border-color:var(--ink)}
+.btn:disabled{opacity:.42;cursor:default}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 30px}
+.chip{font:inherit;font-size:12.5px;background:transparent;border:1px solid var(--line);
+  border-radius:2px;color:var(--mute);padding:5px 10px;cursor:pointer}
+.chip:hover{border-color:var(--ink);color:var(--ink)}
+
+/* ── 回答 ─────────────────────────────────────────────────── */
+.out{max-width:36em}
+.out:empty{display:none}
+.answer{white-space:pre-wrap;font-size:16.5px;line-height:1.95;max-width:33em;margin:0}
+.answer strong{font-weight:600;color:var(--ink)}
+.answer code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.92em;
+  background:var(--tint);padding:1px 5px;border-radius:3px}
+.fine{font-size:12.5px;color:var(--mute);margin:9px 0 0;line-height:1.75}
+.refuse{border-left:3px solid var(--art);background:var(--art-soft);padding:12px 16px;
+  border-radius:0 3px 3px 0;max-width:33em;margin:14px 0 0;font-size:15px}
+.refuse b{color:var(--art)}
+.cite{margin:16px 0 0;padding:12px 16px;background:var(--vein-soft);border-radius:3px;
+  max-width:33em;font-size:13px;color:var(--ink-2);line-height:1.8}
+.cite b{display:block;font-weight:600;font-size:12.5px;color:var(--vein);
+  letter-spacing:.04em;margin-bottom:2px}
+.cite blockquote{margin:6px 0 0;padding:0;border:0;font-size:12.5px;color:var(--mute)}
+
+/* ── 一叠知识卡 ───────────────────────────────────────────── */
+.flash-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0 0 24px;
+  font-size:13px;color:var(--mute)}
+.flash-bar label,.chk{font-size:13px;color:var(--mute);margin:0}
+.chk{display:flex;align-items:center;gap:7px;cursor:pointer}
+.chk input{accent-color:var(--art)}
+.flipwrap{display:grid;perspective:1600px;position:relative;isolation:isolate;
+  margin:0 0 38px;max-width:34em}
+.flipwrap::before,.flipwrap::after{content:"";position:absolute;inset:0;z-index:-1;
+  background:var(--tint);border:1px solid var(--line-2);border-radius:4px}
+.flipwrap::before{transform:translateY(8px) scaleX(.986)}
+.flipwrap::after{transform:translateY(15px) scaleX(.972);opacity:.72}
+.face{grid-area:1 / 1;display:flex;flex-direction:column;justify-content:center;gap:14px;
+  min-height:300px;background:var(--card);border:1px solid var(--line);border-radius:4px;
+  padding:34px 36px;text-align:left;font:inherit;color:var(--ink);
+  box-shadow:0 3px 10px -4px rgba(25,26,23,.16);
+  backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  transition:transform .52s var(--ease),box-shadow .3s}
+.face.front{cursor:pointer}
+.face.front:hover{box-shadow:0 6px 18px -6px rgba(25,26,23,.22)}
+.face.back{transform:rotateY(-180deg);justify-content:flex-start;cursor:pointer;
+  box-shadow:0 1px 4px -2px rgba(25,26,23,.14)}
+.flipwrap.flipped .face.front{transform:rotateY(180deg)}
+.flipwrap.flipped .face.back{transform:rotateY(0)}
+.face-tag{align-self:flex-start;font-family:var(--fs);font-size:12.5px;letter-spacing:.08em;
+  color:var(--art);background:var(--art-soft);border-radius:2px;padding:4px 11px;line-height:1.3}
+.face-text{font-family:var(--song);font-size:27px;line-height:1.72;text-wrap:balance}
+.face.back .face-text{font-family:var(--hei);font-size:16px;line-height:2}
+.face.back .face-tag{color:var(--vein);background:var(--vein-soft)}
+.face-src{margin-top:6px;font-size:12.5px;line-height:1.75;color:var(--vein);
+  background:var(--vein-soft);border-radius:2px;padding:7px 11px}
+.face-hint{font-size:11.5px;color:var(--mute);letter-spacing:.04em}
+.flash-actions{display:flex;gap:9px;flex-wrap:wrap;max-width:34em}
+
+/* ── 自测：答题 ───────────────────────────────────────────── */
+.quiz-setup{display:flex;gap:22px;align-items:flex-end;flex-wrap:wrap;margin-bottom:4px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:12.5px;color:var(--mute)}
+.stem{font-family:var(--song);font-size:20px;line-height:1.85;max-width:31em;margin:26px 0 4px}
+.options{display:flex;flex-direction:column;max-width:34em;margin-bottom:22px}
+.opt{position:relative;display:flex;gap:13px;align-items:flex-start;cursor:pointer;
+  padding:14px 52px 14px 18px;border-bottom:1px solid var(--line-2);
+  transition:background .16s}
+.opt::before{content:"";position:absolute;left:0;top:6px;bottom:6px;width:3px;
+  background:transparent;transform:scaleY(0);transform-origin:center;
+  transition:transform .26s var(--ease),background .26s}
+.opt:hover{background:var(--tint)}
+.opt input{margin:7px 0 0;accent-color:var(--ink);flex:0 0 auto}
+.opt span{flex:1;min-width:0;font-size:15.5px;line-height:1.7}
+.opt.right::before{background:var(--vein);transform:scaleY(1)}
+.opt.right{background:var(--vein-soft)}
+.opt.bad::before{background:var(--art);transform:scaleY(1)}
+.opt.bad{background:var(--art-soft)}
+.verdict{margin:22px 0 6px;font-family:var(--fs);font-size:21px;line-height:1.6;
+  letter-spacing:.04em;animation:stamp .3s var(--ease) both}
+@keyframes stamp{from{opacity:0;transform:scale(1.05)}to{opacity:1;transform:scale(1)}}
+.verdict.ok{color:var(--vein)}
+.verdict.no{color:var(--art)}
+
+/* ── 学习档案 ─────────────────────────────────────────────── */
+.headline{display:flex;align-items:baseline;gap:14px;margin-bottom:18px}
+.big{font-family:var(--fs);font-size:46px;line-height:1;letter-spacing:.01em;
+  font-variant-numeric:tabular-nums}
+.ov{display:flex;flex-wrap:wrap;border-top:1px solid var(--line-2)}
+.kv{display:flex;justify-content:space-between;gap:20px;flex:1 1 250px;min-width:250px;
+  padding:13px 4px 13px 0;border-bottom:1px solid var(--line-2)}
+.kv .k{font-size:13px;color:var(--mute)}
+.kv .v{font-family:var(--fs);font-size:20px;line-height:1.2;font-variant-numeric:tabular-nums}
+.gauge-row{display:flex;gap:34px;align-items:center;flex-wrap:wrap;
+  background:var(--tint);border-radius:3px;padding:22px 26px}
+.gauge{position:relative;width:104px;height:104px;flex:0 0 auto}
+.gauge svg{width:104px;height:104px;transform:rotate(-90deg)}
+.g-track{fill:none;stroke:var(--line);stroke-width:7}
+.g-bar{fill:none;stroke:var(--art);stroke-width:7;stroke-linecap:butt;
+  transition:stroke-dashoffset .7s var(--ease);animation:ringDraw .8s var(--ease) both}
+@keyframes ringDraw{from{stroke-dashoffset:289}}
+.g-num{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--fs);
+  font-size:30px;line-height:1;font-variant-numeric:tabular-nums}
+.g-num i{font-family:var(--hei);font-style:normal;font-size:12px;color:var(--mute);margin-left:2px}
+.gauge-legend{flex:1 1 280px;min-width:240px}
+h3{font-family:var(--fs);font-weight:400;font-size:20px;line-height:1.5;letter-spacing:.05em;
+  margin:38px 0 12px;color:var(--ink)}
+.h3-note{font-family:var(--hei);font-weight:400;font-size:12.5px;letter-spacing:0;
+  color:var(--mute);margin-left:10px}
+.chapter{display:flex;align-items:center;gap:14px;max-width:34em;margin-bottom:12px}
+.ch-name{flex:0 0 96px;font-size:13.5px}
+.bar{flex:1;height:6px;background:var(--line-2);border-radius:0;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--art);border-radius:0}
+.ch-num{font-size:12.5px;color:var(--mute);font-variant-numeric:tabular-nums}
+.heat{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,12px);
+  grid-auto-columns:12px;gap:3px}
+.heat i{width:12px;height:12px;border-radius:1px;background:var(--line-2);display:block}
+.heat i.l1,.heat-legend i.l1{background:#E4C6C0}
+.heat i.l2,.heat-legend i.l2{background:#CB8E83}
+.heat i.l3,.heat-legend i.l3{background:var(--art)}
+.heat i:nth-child(1){animation-delay:0.000s}
+.heat i:nth-child(2){animation-delay:0.013s}
+.heat i:nth-child(3){animation-delay:0.026s}
+.heat i:nth-child(4){animation-delay:0.039s}
+.heat i:nth-child(5){animation-delay:0.052s}
+.heat i:nth-child(6){animation-delay:0.065s}
+.heat i:nth-child(7){animation-delay:0.078s}
+.heat i:nth-child(8){animation-delay:0.091s}
+.heat i:nth-child(9){animation-delay:0.104s}
+.heat i:nth-child(10){animation-delay:0.117s}
+.heat i:nth-child(11){animation-delay:0.130s}
+.heat i:nth-child(12){animation-delay:0.143s}
+.heat i:nth-child(13){animation-delay:0.156s}
+.heat i:nth-child(14){animation-delay:0.169s}
+.heat i:nth-child(15){animation-delay:0.182s}
+.heat i:nth-child(16){animation-delay:0.195s}
+.heat i:nth-child(17){animation-delay:0.208s}
+.heat i:nth-child(18){animation-delay:0.221s}
+.heat i:nth-child(19){animation-delay:0.234s}
+.heat i:nth-child(20){animation-delay:0.247s}
+.heat i:nth-child(21){animation-delay:0.260s}
+.heat i:nth-child(22){animation-delay:0.273s}
+.heat i:nth-child(23){animation-delay:0.286s}
+.heat i:nth-child(24){animation-delay:0.299s}
+.heat i:nth-child(25){animation-delay:0.312s}
+.heat i:nth-child(26){animation-delay:0.325s}
+.heat i:nth-child(27){animation-delay:0.338s}
+.heat i:nth-child(28){animation-delay:0.351s}
+.heat i:nth-child(29){animation-delay:0.364s}
+.heat i:nth-child(30){animation-delay:0.377s}
+.heat i:nth-child(31){animation-delay:0.390s}
+.heat i:nth-child(32){animation-delay:0.403s}
+.heat i:nth-child(33){animation-delay:0.416s}
+.heat i:nth-child(34){animation-delay:0.429s}
+.heat i:nth-child(35){animation-delay:0.442s}
+
+.heat-legend{display:flex;gap:3px;align-items:center;margin-top:11px;font-size:12px;color:var(--mute)}
+.heat-legend i{width:12px;height:12px;border-radius:1px;background:var(--line-2);display:block}
+.heat-legend span{margin-left:8px}
+.sched{max-width:37em}
+.sched-row{display:flex;gap:18px;align-items:baseline;padding:13px 0;
+  border-bottom:1px solid var(--line-2)}
+.sched-row .q{flex:1 1 auto;min-width:0;font-size:14px;line-height:1.7}
+.sched-row .tag{flex:0 0 auto;font-size:12.5px;color:var(--mute);font-variant-numeric:tabular-nums}
+.sched-row .tag.due{color:var(--art)}
+.list{margin:0;padding-left:20px}
+.list li{max-width:33em;margin-bottom:11px;line-height:1.85}
+.plan{margin:0;padding-left:20px}
+.plan li{max-width:33em;margin-bottom:15px;line-height:1.85}
+details.src{border:1px solid var(--line-2);border-radius:3px;padding:13px 16px;
+  background:transparent;max-width:37em}
+details.src summary{cursor:pointer;font-size:13.5px;color:var(--ink-2)}
+.row{display:flex;gap:9px;align-items:center;margin-top:20px;flex-wrap:wrap}
+
+/* ── 页脚 ─────────────────────────────────────────────────── */
+.rail-foot{margin:64px 0 0;padding-top:18px;border-top:1px solid var(--line-2);
+  display:flex;flex-wrap:wrap;align-items:center;gap:10px 20px;font-size:12.5px;color:var(--mute)}
+.engine{margin:0;font-size:12.5px;color:var(--mute)}
+.engine.live{color:var(--vein)}
+.engine.warn{color:var(--art)}
+.kbd-hint{margin:0;font-size:12px;color:var(--mute)}
+.rail-foot .fine{flex-basis:100%;margin:2px 0 0}
+.theme-btn{background:none;border:1px solid var(--line);color:var(--ink-2);
+  font:400 12.5px/1.4 var(--hei);padding:5px 12px;cursor:pointer;border-radius:2px}
+.theme-btn:hover{border-color:var(--ink);color:var(--ink)}
+kbd{font:400 11px/1.5 var(--hei);border:1px solid var(--line);padding:1px 5px;
+  color:var(--ink-2);background:var(--card);border-radius:2px}
+
+/* ── 命令面板 ─────────────────────────────────────────────── */
+.palette{position:fixed;inset:0;background:rgba(16,18,16,.52);display:flex;
+  align-items:flex-start;justify-content:center;padding-top:12vh;z-index:30}
+.palette-box{width:min(600px,92vw);background:var(--paper);border:1px solid var(--ink);
+  border-radius:3px;box-shadow:0 28px 70px -12px rgba(10,12,10,.5);overflow:hidden;
+  animation:noteIn .24s var(--ease) both}
+#palette-input{width:100%;max-width:none;border:0;border-bottom:1px solid var(--line);
+  border-radius:0;padding:17px 19px;font:400 16.5px/1.5 var(--hei);
+  background:var(--paper);color:var(--ink)}
+#palette-input:focus{outline:none}
+.palette-list{list-style:none;margin:0;padding:8px;max-height:52vh;overflow:auto}
+.palette-list li{padding:11px 13px;font-size:14.5px;display:flex;gap:16px;
+  justify-content:space-between;align-items:baseline;cursor:pointer;border-radius:2px}
+.palette-list li .hint{font-size:12px;color:var(--mute);flex:0 0 auto}
+.palette-list li[aria-selected="true"]{background:var(--tint);color:var(--ink);
+  box-shadow:inset 3px 0 0 var(--art)}
+.palette-list li.empty{color:var(--mute);cursor:default;box-shadow:none;background:none}
+.palette-tip{margin:0;padding:11px 19px 14px;font-size:11.5px;color:var(--mute);
+  border-top:1px solid var(--line-2)}
+
+/* ── 窄屏 ─────────────────────────────────────────────────── */
+@media (max-width:1080px){
+  main{max-width:none;border-radius:0;box-shadow:none;padding:38px 34px 40px;
+    min-height:calc(100vh - 58px);margin-bottom:0}
+}
+@media (max-width:820px){
+  .rail{flex-wrap:wrap;gap:0 14px;padding:10px 16px 0}
+  .brand{flex-basis:100%;padding-bottom:6px}
+  .index{margin:0;width:100%}
+  .index ol{overflow-x:auto;flex-wrap:nowrap;padding-bottom:0;gap:0}
+  .nav-btn{white-space:nowrap;flex:0 0 auto;padding:10px 11px 12px}
+  .nav-btn::after{left:11px;right:11px;bottom:0}
+  main{padding:26px 18px 32px}
+  .panel-head h2{font-size:31px}
+  .panel-head{margin-bottom:26px}
+  .masthead{display:block;padding:18px 20px;margin-bottom:30px}
+  .mh-line{max-width:none;font-size:16px}
+  .mh-actions{flex-direction:row;flex-wrap:wrap;margin-top:16px}
+  .face{padding:26px 22px;min-height:260px}
+  .face-text{font-size:23px}
+  .flipwrap{max-width:none}
+  .gauge-row{padding:18px 20px;gap:24px}
+}
+@media (max-width:520px){
+  .nav-btn .num{display:none}
+  .form{grid-template-columns:1fr}
+  .form .row{grid-column:1;margin-top:2px}
+  .btn{padding:12px 18px}
+  .heat{grid-template-rows:repeat(7,11px);grid-auto-columns:11px}
+  .heat i,.heat-legend i{width:11px;height:11px}
+}
+
+/* ── 深色：真的暗室 ───────────────────────────────────────── */
+html[data-theme=dark]{color-scheme:dark;
+  --ground:#0C0F0E; --paper:#171B18; --card:#1E231F; --tint:#212721;
+  --ink:#E9EBE3; --ink-2:#C6C9BE; --mute:#98A094;
+  --line:#333A33; --line-2:#262C26;
+  --art:#D9705F; --art-soft:#2C1E1B;
+  --vein:#8FB2D4; --vein-soft:#1A242D;
+  --bar:#080A09; --bar-ink:#E9EBE3; --bar-mute:#8B938A}
+html[data-theme=dark] ::selection{background:#3A2B27;color:#F3F2EA}
+html[data-theme=dark] .btn{color:#241110}
+html[data-theme=dark] input[type=text]::placeholder{color:#7A8279}
+html[data-theme=dark] .heat i.l1,html[data-theme=dark] .heat-legend i.l1{background:#4E3631}
+html[data-theme=dark] .heat i.l2,html[data-theme=dark] .heat-legend i.l2{background:#8C574C}
+html[data-theme=dark] main{box-shadow:0 1px 0 rgba(255,255,255,.04),0 30px 70px -20px rgba(0,0,0,.9)}
+
+
+/* ══ 动效：全部挂在真实状态变化上 ══════════════════════════════ */
+/* 面板切换 */
+.panel:not(.hidden){animation:panelIn .34s var(--ease) both}
+@keyframes panelIn{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+/* 换卡：新卡升起 */
+.flipwrap.enter{animation:cardIn .42s var(--ease) both}
+@keyframes cardIn{from{opacity:0;transform:translateY(14px) scale(.982)}
+  to{opacity:1;transform:none}}
+/* 翻面：背面内容分层浮现 */
+.flipwrap.flipped .face.back .face-tag{animation:softIn .3s var(--ease) .06s both}
+.flipwrap.flipped .face.back .face-text{animation:softIn .34s var(--ease) .13s both}
+.flipwrap.flipped .face.back .face-src{animation:softIn .34s var(--ease) .21s both}
+@keyframes softIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+/* 判分：批改章落下 */
+.opt.right::after,.opt.bad::after{position:absolute;right:12px;top:50%;margin-top:-15px;
+  width:30px;height:30px;display:grid;place-items:center;font-family:var(--fs);font-size:15px;
+  line-height:1;border:1.5px solid currentColor;border-radius:2px;transform:rotate(-8deg);
+  animation:stampIn .36s var(--ease) .1s both}
+.opt.right::after{content:"对";color:var(--vein);background:var(--vein-soft)}
+.opt.bad::after{content:"误";color:var(--art);background:var(--art-soft)}
+@keyframes stampIn{from{opacity:0;transform:rotate(-8deg) scale(1.55)}
+  to{opacity:1;transform:rotate(-8deg) scale(1)}}
+/* 热力图：逐格点亮 */
+.heat i{animation:cellIn .34s var(--ease) both}
+@keyframes cellIn{from{opacity:0;transform:scale(.55)}to{opacity:1;transform:none}}
+/* 按压反馈 */
+.btn{transition:background .18s,border-color .18s,transform .12s}
+.btn:active:not(:disabled){transform:translateY(1px) scale(.985)}
+.chip:active,.nav-btn:active{transform:translateY(1px)}
+
+@media (prefers-reduced-motion: reduce){
+  *{animation:none !important;transition:none !important}
+}</style>
+</head>
+<body>
+<a class="skip" href="#main">跳到主要内容</a>
+<div class="app">
+  <aside class="rail">
+    <div class="brand">
+      <h1>医学课程 AI 助教</h1>
+      <p class="brand-sub">系统解剖学</p>
+    </div>
+    <nav class="index" aria-label="学习流程">
+      <p class="index-head">学习流程</p>
+      <ol>
+        <li><button class="nav-btn on" type="button" data-panel="ask"><span class="num" aria-hidden="true">一</span>课程问答</button></li>
+        <li><button class="nav-btn" type="button" data-panel="cards"><span class="num" aria-hidden="true">二</span>知识点速记</button></li>
+        <li><button class="nav-btn" type="button" data-panel="quiz"><span class="num" aria-hidden="true">三</span>自测练习</button></li>
+        <li><button class="nav-btn" type="button" data-panel="profile"><span class="num" aria-hidden="true">四</span>学习档案</button></li>
+      </ol>
+    </nav>
+    
+  </aside>
+
+  <main id="main">
+    <section class="masthead" id="masthead" aria-label="今日复习处方"></section>
+    <section class="panel" id="panel-ask" aria-labelledby="h-ask">
+      <header class="panel-head">
+        <span class="ord" aria-hidden="true">一</span><h2 id="h-ask">课程问答</h2>
+        <p class="lede">只回答已审核课程资料里的内容，并附出处。资料里没有依据的问题会明确拒答，不会硬编答案。</p>
+      </header>
+      <form class="form" id="ask-form">
+        <label for="q">你的问题</label>
+        <input id="q" name="question" type="text" autocomplete="off" spellcheck="false"
+               placeholder="例如：肱骨中段骨折为什么会出现垂腕？">
+        <div class="row"><button class="btn" type="submit" id="ask-btn">提问</button></div>
+      </form>
+      <div class="chips">
+        <button class="chip" type="button" data-q="腋神经损伤后会出现哪些典型表现？">腋神经损伤的表现</button>
+        <button class="chip" type="button" data-q="肱骨中段骨折为什么会出现垂腕？">肱骨中段骨折与垂腕</button>
+        <button class="chip" type="button" data-q="腕管综合征为什么会出现桡侧三个半手指麻木？">腕管综合征</button>
+        <button class="chip" type="button" data-q="帮我写一篇选修课论文">试试越界问题</button>
+      </div>
+      <div id="qa-out" class="out" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="panel hidden" id="panel-cards" aria-labelledby="h-cards">
+      <header class="panel-head">
+        <span class="ord" aria-hidden="true">二</span><h2 id="h-cards">知识点速记</h2>
+        <p class="lede">先自己回想，再翻到背面核对。标记为没记住的内容会进入学习档案的复习清单。</p>
+      </header>
+      <div class="flash-bar">
+        <label for="card-chapter">章节</label>
+        <select id="card-chapter"><option value="all">全部章节</option></select>
+        <label class="chk" for="card-due"><input type="checkbox" id="card-due"> 只看今日到期</label>
+        <span class="fine" id="card-count"></span>
+      </div>
+      <div class="flipwrap" id="flipwrap">
+        <button class="face front" id="face-front" type="button" aria-label="正在加载知识卡">
+          <span class="face-tag" aria-hidden="true">加载中</span>
+          <span class="face-text" aria-hidden="true">正在读取知识卡…</span>
+        </button>
+        <button class="face back" id="face-back" type="button" inert aria-hidden="true"
+                aria-label="知识卡背面"></button>
+      </div>
+      <div class="flash-actions">
+        <button class="btn" type="button" id="card-known" disabled>记住了</button>
+        <button class="btn ghost" type="button" id="card-unknown" disabled>没记住</button>
+        <button class="btn ghost" type="button" id="card-tts" disabled>朗读</button>
+        <button class="btn ghost" type="button" id="card-next">换一张</button>
+      </div>
+      <p class="fine" id="card-note"></p>
+    </section>
+
+    <section class="panel hidden" id="panel-quiz" aria-labelledby="h-quiz">
+      <header class="panel-head">
+        <span class="ord" aria-hidden="true">三</span><h2 id="h-quiz">自测练习</h2>
+        <p class="lede">提交后立刻看到正确答案、解析和出处。答错的题会自动进错题本和复习清单。</p>
+      </header>
+      <div class="quiz-setup" id="quiz-setup">
+        <div class="field"><label for="quiz-chapter">章节</label>
+          <select id="quiz-chapter"><option value="all">全部章节</option></select></div>
+        <div class="field"><label for="quiz-n">题量</label>
+          <select id="quiz-n">
+            <option value="2">2 题</option>
+            <option value="4" selected>4 题</option>
+            <option value="6">6 题</option>
+            <option value="8">8 题</option>
+          </select></div>
+        <button class="btn" type="button" id="quiz-start">开始自测</button>
+      </div>
+      <div id="quiz-run"></div>
+      <div id="quiz-result"></div>
+    </section>
+
+    <section class="panel hidden" id="panel-profile" aria-labelledby="h-profile">
+      <header class="panel-head">
+        <span class="ord" aria-hidden="true">四</span><h2 id="h-profile">学习档案</h2>
+        <p class="lede">根据速记标记和自测结果自动生成，用来回答“我现在哪里最薄弱、该复习什么”。</p>
+      </header>
+      <div class="gauge-row">
+        <div class="gauge" id="gauge"></div>
+        <div class="gauge-legend" id="ov"></div>
+      </div>
+      <h3>学习活跃度<span class="h3-note" id="activity-note"></span></h3>
+      <div class="heat" id="heat"></div>
+      <div class="heat-legend"><i></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><span>近 5 周，每格一天</span></div>
+      <h3>章节掌握度</h3>
+      <div id="chapters"></div>
+      <h3>复习节奏</h3>
+      <div class="sched" id="sched"></div>
+      <h3>知识缺口</h3>
+      <div id="gaps"></div>
+      <h3>错题本</h3>
+      <div id="wrong"></div>
+      <h3>复习清单</h3>
+      <div id="plan"></div>
+      <h3>资料来源</h3>
+      <details class="src"><summary>查看知识卡与自测题分别出自哪里</summary><div id="sources"></div></details>
+      <p class="row"><button class="btn" type="button" id="report-btn">导出学习报告</button>
+        <button class="btn ghost" type="button" id="reset-btn">清空本机学习记录</button></p>
+      <p class="fine">清空只影响本机这份匿名记录，服务器上不保存姓名、学号或成绩。</p>
+    </section>
+  <div class="rail-foot">
+  <p class="engine" id="engine" role="status" aria-live="polite">引擎加载中…</p>
+  <p class="kbd-hint"><kbd>Ctrl</kbd> <kbd>K</kbd> 命令面板　<kbd>/</kbd> 提问</p>
+  <button class="theme-btn" type="button" id="theme-btn" aria-pressed="false">切换为深色</button>
+  <p class="fine">学习记录只存本机匿名编号，不含姓名与学号。</p>
+    </div>
+  </main>
+</div>
+<script>
+var $ = function (s) { return document.querySelector(s); };
+var $$ = function (s) { return Array.prototype.slice.call(document.querySelectorAll(s)); };
+var sid = localStorage.getItem("medta_sid");
+if (!sid) {
+  sid = "s" + Math.random().toString(36).slice(2, 10);
+  localStorage.setItem("medta_sid", sid);
+}
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
+    var m = {38: "&amp;", 60: "&lt;", 62: "&gt;", 34: "&quot;"};
+    return m[c.charCodeAt(0)] || c;
+  });
+}
+function fmt(s) {
+  // Coze 答案常带 **粗体** 与 `代码`；先转义，再只放开这两种行内标记
+  return esc(s)
+    .replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/`([^`\n]+)`/g, "<code>$1</code>");
+}
+function getJSON(path) { return fetch(path).then(function (r) { return r.json(); }); }
+function postJSON(path, body) {
+  return fetch(path, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(Object.assign({sid: sid}, body || {}))
+  }).then(function (r) { return r.json(); });
+}
+function letter(n) { return ["A", "B", "C", "D", "E", "F"][n] || String(n + 1); }
+
+var ROUTE_TEXT = {
+  local_card: "来源：本地已审核知识卡，未消耗在线额度。",
+  local_fallback: "来源：本地知识卡兜底，未消耗在线额度。",
+  coze: "来源：在线模型（Coze），本次消耗 1 次调用额度。",
+  quota_exhausted: "来源：在线额度已用完，本次没有作答。",
+  coze_failed: "来源：在线模型暂时不可用，本次没有作答。",
+  no_engine: "来源：未配置在线模型，只查了本地知识卡。"
+};
+
+var PANELS = ["ask", "cards", "quiz", "profile"];
+function show(name, push) {
+  PANELS.forEach(function (p) { $("#panel-" + p).classList.toggle("hidden", p !== name); });
+  $$(".nav-btn").forEach(function (b) {
+    var on = b.getAttribute("data-panel") === name;
+    b.classList.toggle("on", on);
+    if (on) { b.setAttribute("aria-current", "page"); } else { b.removeAttribute("aria-current"); }
+  });
+  if (push !== false) {
+    if (history.replaceState) { history.replaceState(null, "", "#" + name); } else { location.hash = name; }
+  }
+  if (name === "cards") { loadDeck(); }
+  if (name === "profile") { loadProfile(); loadSources(); }
+}
+$$(".nav-btn").forEach(function (b) {
+  b.addEventListener("click", function () { show(b.getAttribute("data-panel")); });
+});
+window.addEventListener("hashchange", function () {
+  var n = location.hash.replace("#", "");
+  if (PANELS.indexOf(n) >= 0) { show(n, false); }
+});
+
+function loadHealth() {
+  getJSON("/api/health?sid=" + encodeURIComponent(sid)).then(function (h) {
+    var el = $("#engine");
+    var used = h.coze_calls || 0, cap = h.coze_max || 0;
+    var mine = h.user_used || 0, limit = h.user_limit || 0;
+    if (h.engine === "coze" && used < cap && mine < limit) {
+      el.textContent = "在线模型已接入　我今天 " + mine + "/" + limit
+        + " 次　全站 " + used + "/" + cap;
+      el.className = "engine live";
+    } else if (h.engine === "coze") {
+      el.textContent = "在线额度已用完　已切回本地知识卡";
+      el.className = "engine warn";
+    } else {
+      el.textContent = "本地知识卡模式　未接入在线模型";
+      el.className = "engine";
+    }
+  }).catch(function () {
+    $("#engine").textContent = "后端没有响应　请确认 app.py 正在运行";
+    $("#engine").className = "engine warn";
+  });
+}
+
+function fillChapters(sel, chapters) {
+  (chapters || []).forEach(function (ch) {
+    var o = document.createElement("option");
+    o.value = ch;
+    o.textContent = ch;
+    sel.appendChild(o);
+  });
+}
+
+$("#ask-form").addEventListener("submit", function (e) {
+  e.preventDefault();
+  var q = $("#q").value.trim();
+  if (!q) { $("#q").focus(); return; }
+  var out = $("#qa-out"), btn = $("#ask-btn");
+  out.innerHTML = "<p class='fine'>正在检索课程资料…</p>";
+  btn.disabled = true;
+  postJSON("/api/ask", {question: q}).then(function (r) {
+    btn.disabled = false;
+    if (r.refused) {
+      out.innerHTML = "<div class='refuse'><b>没有作答。</b>" + esc(r.reason) + "</div>"
+        + "<p class='fine'>" + esc(ROUTE_TEXT[r.route] || "") + "</p>";
+      return;
+    }
+    var cites = (r.citations || []).map(function (c) {
+      return "<div class='cite'><b>出处</b>" + esc(c.doc)
+        + (c.locator ? "　" + esc(c.locator) : "")
+        + (c.quote ? "<blockquote>" + esc(c.quote) + "</blockquote>" : "") + "</div>";
+    }).join("");
+    var matched = r.matched ? "<p class='fine'>命中知识卡：" + esc(r.matched.front) + "</p>" : "";
+    var routeText = r.cached ? "来源：在线模型（重复问题命中缓存，未消耗额度）。"
+      : (ROUTE_TEXT[r.route] || "");
+    out.innerHTML = "<p class='answer'>" + fmt(r.answer) + "</p>" + cites + matched
+      + (r.note ? "<p class='fine'>" + esc(r.note) + "</p>" : "")
+      + "<p class='fine'>" + esc(routeText) + "</p>";
+    loadHealth();
+  }).catch(function () {
+    btn.disabled = false;
+    out.innerHTML = "<div class='refuse'>请求后端失败。请确认 backend/app.py 还在运行。</div>";
+  });
+});
+$$(".chip").forEach(function (b) {
+  b.addEventListener("click", function () {
+    $("#q").value = b.getAttribute("data-q");
+    if ($("#ask-form").requestSubmit) { $("#ask-form").requestSubmit(); }
+    else { $("#ask-btn").click(); }
+  });
+});
+
+var DECK = [], deckIndex = 0, flipped = false;
+function loadDeck() {
+  var chapter = $("#card-chapter").value;
+  var onlyDue = $("#card-due") && $("#card-due").checked;
+  getJSON("/api/cards?sid=" + encodeURIComponent(sid) + (onlyDue ? "&due=1" : "")).then(function (list) {
+    DECK = (list || []).filter(function (c) { return chapter === "all" || c.chapter === chapter; });
+    deckIndex = 0;
+    $("#card-count").textContent = DECK.length ? "共 " + DECK.length + " 张" : "这个章节暂无卡片";
+    renderCard();
+  });
+}
+function renderCard() {
+  var wrap = $("#flipwrap");
+  wrap.classList.remove("flipped");
+  flipped = false;
+  $("#face-back").setAttribute("inert", "");
+  $("#face-back").setAttribute("aria-hidden", "true");
+  $("#face-front").removeAttribute("inert");
+  $("#card-known").disabled = true;
+  $("#card-unknown").disabled = true;
+  if ($("#card-tts")) { $("#card-tts").disabled = true; }
+  if (!DECK.length) {
+    $("#face-front").innerHTML = "<span class='face-tag' aria-hidden='true'>提示</span>"
+      + "<span class='face-text' aria-hidden='true'>这个章节暂时没有知识卡。</span>";
+    $("#face-front").setAttribute("aria-label", "这个章节暂时没有知识卡");
+    $("#card-note").textContent = "";
+    enterCard();
+    return;
+  }
+  var c = DECK[deckIndex];
+  var tag = c.status === "mastered" ? "已掌握" : (c.status === "learning" ? "需复习" : "未学过");
+  $("#face-front").innerHTML = "<span class='face-tag' aria-hidden='true'>" + esc(c.topic)
+    + "（" + tag + "）</span><span class='face-text' aria-hidden='true'>" + esc(c.front) + "</span>"
+    + "<span class='face-hint' aria-hidden='true'>点击卡片翻到背面</span>";
+  $("#face-front").setAttribute("aria-label", "知识卡：" + c.front + "。按回车翻到背面");
+  $("#face-back").innerHTML = "<span class='face-tag'>" + esc(c.chapter) + "</span>"
+    + "<span class='face-text'>" + esc(c.answer) + "</span>"
+    + "<span class='face-src'>出处　" + esc(c.source.doc)
+    + (c.source.locator ? "　" + esc(c.source.locator) : "") + "</span>";
+  $("#card-note").textContent = "第 " + (deckIndex + 1) + " / " + DECK.length + " 张　"
+    + (c.origin === "placeholder" ? "内容为占位示例，待团队审核替换" : "");
+  enterCard();
+}
+function enterCard() {
+  var w = document.getElementById("flipwrap");
+  if (!w) { return; }
+  w.classList.remove("enter");
+  void w.offsetWidth;
+  w.classList.add("enter");
+}
+function flip(to) {
+  var wrap = $("#flipwrap");
+  if (!DECK.length) { return; }
+  var open = (to === undefined) ? !flipped : !!to;
+  wrap.classList.toggle("flipped", open);
+  flipped = open;
+  if (open) {
+    $("#face-front").setAttribute("inert", "");
+    $("#face-front").setAttribute("aria-hidden", "true");
+    $("#face-back").removeAttribute("inert");
+    $("#face-back").removeAttribute("aria-hidden");
+    $("#card-known").disabled = false;
+    $("#card-unknown").disabled = false;
+    if ($("#card-tts")) { $("#card-tts").disabled = false; }
+    $("#face-back").focus();
+  } else {
+    $("#face-back").setAttribute("inert", "");
+    $("#face-back").setAttribute("aria-hidden", "true");
+    $("#face-front").removeAttribute("inert");
+    $("#face-front").removeAttribute("aria-hidden");
+    $("#card-known").disabled = true;
+    $("#card-unknown").disabled = true;
+    if ($("#card-tts")) { $("#card-tts").disabled = true; }
+    $("#face-front").focus();
+  }
+}
+$("#face-front").addEventListener("click", function () { flip(true); });
+$("#face-back").addEventListener("click", function () { flip(false); });
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Escape" && flipped) { flip(false); }
+});
+$("#card-next").addEventListener("click", function () {
+  if (!DECK.length) { return; }
+  deckIndex = (deckIndex + 1) % DECK.length;
+  renderCard();
+});
+function rateCard(known) {
+  if (!flipped || !DECK.length) { return; }
+  var c = DECK[deckIndex];
+  postJSON("/api/cards/review", {card_id: c.id, known: known}).then(function (r) {
+    c.status = r.status;
+    var sch = r.schedule || {};
+    var next = sch.interval_days ? "下次复习排在 " + sch.interval_days + " 天后。"
+      : "这张卡放回今天的队列，稍后还会出现。";
+    var msg = (known ? "已标记为掌握。" : "已写入复习清单。") + next
+      + "已掌握 " + r.overview.mastered + " / " + r.overview.cards_total + " 张。";
+    if (typeof advLoad === "function") { advLoad(); }
+    deckIndex = (deckIndex + 1) % DECK.length;
+    renderCard();
+    $("#card-note").textContent = msg + "　" + $("#card-note").textContent;
+  });
+}
+$("#card-known").addEventListener("click", function () { rateCard(true); });
+$("#card-unknown").addEventListener("click", function () { rateCard(false); });
+
+var RUN = null;
+$("#quiz-start").addEventListener("click", function () {
+  var chapter = $("#quiz-chapter").value, n = $("#quiz-n").value;
+  getJSON("/api/quiz?chapter=" + encodeURIComponent(chapter) + "&n=" + encodeURIComponent(n))
+    .then(function (data) {
+      if (!data.items || !data.items.length) {
+        $("#quiz-run").innerHTML = "<p class='fine'>这个章节暂时没有题目。</p>";
+        return;
+      }
+      RUN = {items: data.items, i: 0, correct: 0, wrong: []};
+      $("#quiz-setup").classList.add("hidden");
+      $("#quiz-result").classList.add("hidden");
+      renderQuestion();
+    });
+});
+function renderQuestion() {
+  var q = RUN.items[RUN.i];
+  RUN.chosen = null;
+  var opts = q.options.map(function (o, i) {
+    return "<label class='opt'><input type='radio' name='opt' value='" + i + "'><span>"
+      + letter(i) + "　" + esc(o) + "</span></label>";
+  }).join("");
+  $("#quiz-run").innerHTML = "<p class='fine'>第 " + (RUN.i + 1) + " / " + RUN.items.length
+    + " 题　" + esc(q.chapter) + "</p>"
+    + "<p class='stem' id='quiz-stem'>" + esc(q.stem) + "</p>"
+    + "<div class='options' role='radiogroup' aria-labelledby='quiz-stem'>" + opts + "</div>"
+    + "<p><button class='btn' type='button' id='quiz-submit'>提交答案</button></p>"
+    + "<div id='quiz-feedback' role='status' aria-live='polite'></div>";
+  $$("#quiz-run input[name=opt]").forEach(function (inp) {
+    inp.addEventListener("change", function () { RUN.chosen = parseInt(inp.value, 10); });
+  });
+  $("#quiz-submit").addEventListener("click", submitAnswer);
+}
+function submitAnswer() {
+  var fb = $("#quiz-feedback");
+  if (RUN.chosen === null) {
+    fb.innerHTML = "<div class='refuse'>请先选择一个选项，再提交。</div>";
+    return;
+  }
+  var q = RUN.items[RUN.i], btn = $("#quiz-submit");
+  btn.disabled = true;
+  postJSON("/api/quiz/answer", {qid: q.id, choice: RUN.chosen}).then(function (r) {
+    if (r.correct) { RUN.correct += 1; } else { RUN.wrong.push({q: q, chosen: RUN.chosen, answer: r.answer_index}); }
+    $$("#quiz-run input[name=opt]").forEach(function (inp) {
+      inp.disabled = true;
+      var i = parseInt(inp.value, 10);
+      if (i === r.answer_index) { inp.parentNode.classList.add("right"); }
+      if (i === RUN.chosen && !r.correct) { inp.parentNode.classList.add("bad"); }
+    });
+    btn.classList.add("hidden");
+    fb.innerHTML = "<p class='verdict " + (r.correct ? "ok" : "no") + "'>"
+      + (r.correct ? "答对了。" : "答错了。正确答案是 " + letter(r.answer_index) + "。") + "</p>"
+      + "<p class='answer'>" + esc(r.explain) + "</p>"
+      + "<div class='cite'><b>出处</b>" + esc(r.source.doc)
+      + (r.source.locator ? "　" + esc(r.source.locator) : "") + "</div>"
+      + "<p class='row'><button class='btn' type='button' id='quiz-next'>"
+      + (RUN.i + 1 < RUN.items.length ? "下一题" : "看结果") + "</button></p>";
+    var next = $("#quiz-next");
+    next.addEventListener("click", function () {
+      RUN.i += 1;
+      if (RUN.i < RUN.items.length) { renderQuestion(); } else { finishQuiz(); }
+    });
+    next.focus();
+  });
+}
+function finishQuiz() {
+  var total = RUN.items.length;
+  var html = "<div class='headline'><span class='big'>" + RUN.correct + " / " + total + "</span>"
+    + "<span>本次答对 " + RUN.correct + " 题，答错 " + RUN.wrong.length + " 题。</span></div>";
+  if (RUN.wrong.length) {
+    html += "<h3>错题本（已写入学习档案）</h3><ul class='list'>"
+      + RUN.wrong.map(function (w) {
+          return "<li>" + esc(w.q.stem) + "<br><span class='fine'>你的答案 " + letter(w.chosen)
+            + "　正确答案 " + letter(w.answer) + "</span></li>";
+        }).join("")
+      + "</ul>";
+  } else {
+    html += "<p>全部答对。可以回知识点速记再过一遍，或换一批题。</p>";
+  }
+  html += "<p class='row'><button class='btn' type='button' id='quiz-again'>再测一次</button>"
+    + (RUN.wrong.length ? "<button class='btn ghost' type='button' id='quiz-retry'>只练错题</button>" : "")
+    + "</p>";
+  $("#quiz-run").innerHTML = "";
+  var res = $("#quiz-result");
+  res.classList.remove("hidden");
+  res.innerHTML = html;
+  $("#quiz-again").addEventListener("click", function () {
+    res.classList.add("hidden");
+    $("#quiz-setup").classList.remove("hidden");
+    $("#quiz-start").focus();
+  });
+  if (RUN.wrong.length) {
+    $("#quiz-retry").addEventListener("click", function () {
+      RUN = {items: RUN.wrong.map(function (w) { return w.q; }), i: 0, correct: 0, wrong: []};
+      res.classList.add("hidden");
+      renderQuestion();
+    });
+  }
+  loadHealth();
+}
+
+function kv(k, v) {
+  return "<div class='kv'><span class='k'>" + esc(k) + "</span><span class='v'>" + esc(v) + "</span></div>";
+}
+function loadProfile() {
+  getJSON("/api/profile/" + encodeURIComponent(sid)).then(function (p) {
+    var o = p.overview;
+    $("#ov").innerHTML = kv("已掌握知识卡", o.mastered + " / " + o.cards_total)
+      + kv("还在复习", o.learning + " 张")
+      + kv("做题正确率", o.answered ? o.accuracy + "%（" + o.correct + " / " + o.answered + "）" : "还没有做题")
+      + kv("待复习知识点", o.open_gaps + " 个")
+      + kv("错题", o.wrong + " 道");
+    $("#chapters").innerHTML = p.chapters.length
+      ? p.chapters.map(function (c) {
+          return "<div class='chapter'><span class='ch-name'>" + esc(c.chapter) + "</span>"
+            + "<span class='bar'><i style='width:" + c.rate + "%'></i></span>"
+            + "<span class='ch-num'>" + c.mastered + "/" + c.total + "</span></div>";
+        }).join("")
+      : "<p class='fine'>暂无章节数据。</p>";
+    $("#gaps").innerHTML = p.gaps.length
+      ? "<ul class='list'>" + p.gaps.map(function (g) {
+          return "<li>" + esc(g.label) + "<br><span class='fine'>" + esc(g.chapter)
+            + "　出现 " + g.count + " 次</span></li>";
+        }).join("") + "</ul>"
+      : "<p class='fine'>暂无知识缺口。做过速记或自测后会自动出现。</p>";
+    $("#wrong").innerHTML = p.wrong.length
+      ? "<ul class='list'>" + p.wrong.map(function (w) {
+          return "<li>" + esc(w.stem) + "<br><span class='fine'>你的答案 " + letter(w.your_answer)
+            + "　正确答案 " + letter(w.answer_index) + "</span></li>";
+        }).join("") + "</ul>"
+      : "<p class='fine'>还没有错题。</p>";
+    $("#plan").innerHTML = p.plan.length
+      ? "<ol class='plan'>" + p.plan.map(function (x) {
+          return "<li><b>" + esc(x.gap) + "</b><br>" + esc(x.action)
+            + (x.source ? "<br><span class='fine'>出处　" + esc(x.source.doc)
+              + (x.source.locator ? "　" + esc(x.source.locator) : "") + "</span>" : "") + "</li>";
+        }).join("") + "</ol>"
+      : "<p class='fine'>复习清单是空的，当前没有待复习的知识点。</p>";
+  });
+}
+function loadSources() {
+  getJSON("/api/sources").then(function (s) {
+    $("#sources").innerHTML = "<ul class='list'>" + s.docs.map(function (d) {
+      return "<li>" + esc(d.doc) + "<br><span class='fine'>知识卡 " + d.cards + " 张　自测题 " + d.quiz + " 道"
+        + (d.locators && d.locators.length ? "　位置：" + d.locators.map(esc).join("；") : "")
+        + "</span></li>";
+    }).join("") + "</ul><p class='fine'>" + esc(s.note) + "</p>";
+  });
+}
+$("#reset-btn").addEventListener("click", function () {
+  if (!window.confirm("清空本机的学习记录？已掌握、错题和复习清单都会归零，无法恢复。")) { return; }
+  postJSON("/api/reset", {}).then(function () {
+    loadProfile(); loadSources(); loadHealth();
+    if (typeof advLoad === "function") { advLoad(); }
+  });
+});
+
+loadHealth();
+getJSON("/api/health").then(function (h) {
+  fillChapters($("#card-chapter"), h.chapters);
+  fillChapters($("#quiz-chapter"), h.chapters);
+  var n = location.hash.replace("#", "");
+  show(PANELS.indexOf(n) >= 0 ? n : "ask", false);
+});
+</script>
+
+<div class="palette hidden" id="palette" role="dialog" aria-modal="true" aria-label="命令面板">
+  <div class="palette-box">
+    <label class="sr-only" for="palette-input">搜索知识点或命令</label>
+    <input id="palette-input" type="text" autocomplete="off" spellcheck="false"
+           placeholder="搜知识点、跳模块、开始自测…">
+    <ul class="palette-list" id="palette-list" role="listbox" aria-label="可选命令"></ul>
+    <p class="palette-tip">↑↓ 选择　Enter 执行　Esc 关闭</p>
+  </div>
+</div>
+
+<script>
+/* 进阶层：今日复习处方 / 掌握度环 / 学习活跃度 / 复习节奏 / 命令面板 / 快捷键 / 朗读 / 报告 / 深色模式 */
+var ADV = { profile: null, cards: [], lastFocus: null, idx: 0, items: [] };
+var NL = String.fromCharCode(10);
+
+function advDate(d) {
+  try {
+    return new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "long",
+      day: "numeric", weekday: "long" }).format(d);
+  } catch (e) {
+    return d.getFullYear() + " 年 " + (d.getMonth() + 1) + " 月 " + d.getDate() + " 日";
+  }
+}
+
+function advRenderMasthead() {
+  var el = document.getElementById("masthead");
+  if (!el || !ADV.profile) { return; }
+  var o = ADV.profile.overview;
+  var sched = ADV.profile.sched || [];
+  var due = o.due || 0;
+  var lapse = sched.filter(function (s) { return s.lapses > 0 && s.due_in_days === 0; }).length;
+  var line = due > 0
+    ? "先过 <b>" + due + "</b> 张到期卡片"
+      + (lapse ? "，其中 " + lapse + " 张以前答错过" : "") + "，再做一轮自测。"
+    : "今天没有到期卡片。可以随机抽 4 道题，或者提前过一遍明天要复习的内容。";
+  var main = due > 0
+    ? '<button class="btn" type="button" id="mh-go">开始今日复习（' + due + "）</button>"
+    : '<button class="btn" type="button" id="mh-quiz">随机自测 4 题</button>';
+  el.innerHTML = '<p class="mh-date">' + esc(advDate(new Date())) + "</p>"
+    + '<p class="mh-order">今日复习处方</p>'
+    + '<p class="mh-line">' + line + "</p>"
+    + '<p class="mh-meta">连续 ' + (o.streak || 0) + " 天　正确率 "
+    + (o.answered ? o.accuracy + "%" : "还没做题")
+    + "　已掌握 " + o.mastered + " / " + o.cards_total + "</p>"
+    + '<div class="mh-actions">' + main
+    + '<button class="btn ghost" type="button" id="mh-pal">快速跳转</button></div>';
+  var go = document.getElementById("mh-go");
+  if (go) { go.addEventListener("click", advGoDue); }
+  var qz = document.getElementById("mh-quiz");
+  if (qz) { qz.addEventListener("click", function () {
+    show("quiz");
+    var s = document.getElementById("quiz-start");
+    if (s) { s.click(); }
+  }); }
+  var pl = document.getElementById("mh-pal");
+  if (pl) { pl.addEventListener("click", advOpenPalette); }
+}
+
+function advRenderGauge() {
+  var el = document.getElementById("gauge");
+  if (!el || !ADV.profile) { return; }
+  var o = ADV.profile.overview;
+  var total = o.cards_total || 1, done = o.mastered || 0;
+  var pct = Math.round(100 * done / total);
+  var r = 46, circ = 2 * Math.PI * r;
+  var off = circ * (1 - done / total);
+  el.innerHTML = '<svg viewBox="0 0 120 120" role="img" aria-label="已掌握 '
+    + done + " / " + total + '">'
+    + '<circle class="g-track" cx="60" cy="60" r="' + r + '"></circle>'
+    + '<circle class="g-bar" cx="60" cy="60" r="' + r
+    + '" stroke-dasharray="' + circ.toFixed(1) + '" stroke-dashoffset="' + off.toFixed(1)
+    + '"></circle></svg><span class="g-num">' + pct + "<i>%</i></span>";
+  var num = el.querySelector(".g-num");
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var panel = document.getElementById("panel-profile");
+  if (num && num.firstChild && num.firstChild.nodeType === 3 && !reduce
+      && !ADV.gaugePlayed && pct > 0) {
+    ADV.gaugePlayed = true;
+    var tries = 0;
+    var setNum = function (v) {
+      var g = document.getElementById("gauge");
+      var n = g && g.querySelector(".g-num");
+      if (n && n.firstChild && n.firstChild.nodeType === 3) { n.firstChild.nodeValue = v; }
+    };
+    var run = function () {
+      tries += 1;
+      if (panel && panel.classList.contains("hidden") && tries < 120) {
+        setTimeout(run, 120);
+        return;
+      }
+      var t0 = performance.now();
+      setNum("0");
+      var tick = function (t) {
+        var k = Math.min(1, (t - t0) / 720);
+        setNum(String(Math.round(pct * (1 - Math.pow(1 - k, 3)))));
+        if (k < 1) { requestAnimationFrame(tick); }
+      };
+      requestAnimationFrame(tick);
+    };
+    setTimeout(run, 80);
+  }
+}
+
+function advRenderHeat() {
+  var el = document.getElementById("heat");
+  if (!el || !ADV.profile) { return; }
+  var days = ADV.profile.activity || [];
+  var out = "";
+  days.forEach(function (d) {
+    var cls = d.n === 0 ? "" : (d.n <= 2 ? "l1" : (d.n <= 5 ? "l2" : "l3"));
+    var tip = d.date + " · " + (d.n ? d.n + " 次学习动作" : "没有记录");
+    out += '<i class="' + cls + '" title="' + esc(tip) + '"></i>';
+  });
+  el.innerHTML = out;
+  var note = document.getElementById("activity-note");
+  if (note) { note.textContent = "连续 " + (ADV.profile.overview.streak || 0) + " 天有学习动作"; }
+}
+
+function advRenderSched() {
+  var el = document.getElementById("sched");
+  if (!el || !ADV.profile) { return; }
+  var rows = (ADV.profile.sched || []).map(function (s) {
+    var when = s.status === "unseen" ? "没学过"
+      : (s.due_in_days > 0 ? s.due_in_days + " 天后" : "今天到期");
+    var cls = s.due_in_days > 0 ? "tag" : "tag due";
+    var meta = "间隔 " + s.interval_days + " 天 · 难度系数 " + s.ease
+      + (s.lapses ? " · 遗忘 " + s.lapses + " 次" : "");
+    return '<div class="sched-row"><span class="q">' + esc(s.front)
+      + '<br><span class="fine">' + esc(meta) + "</span></span>"
+      + '<span class="' + cls + '">' + esc(when) + "</span></div>";
+  }).join("");
+  el.innerHTML = rows || '<p class="fine">还没有卡片。</p>';
+}
+
+function advGoDue() {
+  var chk = document.getElementById("card-due");
+  if (chk) { chk.checked = true; }
+  show("cards");
+  loadDeck();
+}
+
+function advCommands() {
+  var items = [
+    { label: "课程问答", hint: "一", run: function () { show("ask"); } },
+    { label: "知识点速记", hint: "二", run: function () { show("cards"); } },
+    { label: "自测练习", hint: "三", run: function () { show("quiz"); } },
+    { label: "学习档案", hint: "四", run: function () { show("profile"); } },
+    { label: "开始今日复习", hint: "只看到期卡片", run: advGoDue },
+    { label: "开始自测 4 题", hint: "随机抽题", run: function () {
+      show("quiz");
+      var s = document.getElementById("quiz-start");
+      if (s) { s.click(); }
+    } },
+    { label: "导出学习报告", hint: "Markdown", run: advExportReport },
+    { label: "切换深色 / 浅色", hint: "外观", run: advToggleTheme }
+  ];
+  (ADV.cards || []).forEach(function (c) {
+    items.push({ label: c.front, hint: c.chapter + " · 知识卡", run: function () {
+      show("ask");
+      var q = document.getElementById("q");
+      if (q) {
+        q.value = c.front;
+        var f = document.getElementById("ask-form");
+        if (f && f.requestSubmit) { f.requestSubmit(); }
+      }
+    } });
+  });
+  return items;
+}
+
+function advPaintPalette(q) {
+  var list = document.getElementById("palette-list");
+  if (!list) { return; }
+  var all = advCommands();
+  var needle = (q || "").trim().toLowerCase();
+  ADV.items = needle ? all.filter(function (it) {
+    return (it.label + " " + it.hint).toLowerCase().indexOf(needle) >= 0;
+  }) : all;
+  if (ADV.idx >= ADV.items.length) { ADV.idx = 0; }
+  if (!ADV.items.length) {
+    list.innerHTML = '<li class="empty">没有匹配项，换个说法试试</li>';
+    return;
+  }
+  list.innerHTML = ADV.items.map(function (it, i) {
+    return '<li role="option" data-i="' + i + '" aria-selected="' + (i === ADV.idx) + '">'
+      + "<span>" + esc(it.label) + '</span><span class="hint">' + esc(it.hint) + "</span></li>";
+  }).join("");
+  Array.prototype.forEach.call(list.querySelectorAll("li[data-i]"), function (li) {
+    li.addEventListener("click", function () {
+      advRunPalette(parseInt(li.getAttribute("data-i"), 10));
+    });
+  });
+}
+
+function advOpenPalette() {
+  var box = document.getElementById("palette");
+  var input = document.getElementById("palette-input");
+  if (!box || !input) { return; }
+  ADV.lastFocus = document.activeElement;
+  box.classList.remove("hidden");
+  input.value = "";
+  ADV.idx = 0;
+  advPaintPalette("");
+  input.focus();
+}
+
+function advClosePalette() {
+  var box = document.getElementById("palette");
+  if (!box || box.classList.contains("hidden")) { return; }
+  box.classList.add("hidden");
+  if (ADV.lastFocus && ADV.lastFocus.focus) { ADV.lastFocus.focus(); }
+}
+
+function advRunPalette(i) {
+  var it = ADV.items[i];
+  advClosePalette();
+  if (it && it.run) { it.run(); }
+}
+
+function advExportReport() {
+  var prof = ADV.profile;
+  if (!prof) { return; }
+  var o = prof.overview;
+  var L = [];
+  L.push("# 学习报告 · 系统解剖学");
+  L.push("");
+  L.push("生成时间：" + advDate(new Date()));
+  L.push("");
+  L.push("## 概览");
+  L.push("");
+  L.push("- 已掌握知识卡：" + o.mastered + " / " + o.cards_total);
+  L.push("- 今天到期：" + o.due + " 张");
+  L.push("- 连续学习：" + o.streak + " 天");
+  L.push("- 自测正确率：" + (o.answered ? o.accuracy + "%（" + o.correct + " / " + o.answered + "）" : "还没做题"));
+  L.push("");
+  L.push("## 知识缺口");
+  L.push("");
+  if (prof.gaps.length) {
+    prof.gaps.forEach(function (g) {
+      L.push("- " + g.label + "（" + g.chapter + "，出现 " + g.count + " 次）");
+    });
+  } else { L.push("- 暂无"); }
+  L.push("");
+  L.push("## 错题");
+  L.push("");
+  if (prof.wrong.length) {
+    prof.wrong.forEach(function (w) {
+      L.push("- " + w.stem + "（你的答案 " + letter(w.your_answer)
+        + "，正确答案 " + letter(w.answer_index) + "）");
+    });
+  } else { L.push("- 暂无"); }
+  L.push("");
+  L.push("## 复习清单");
+  L.push("");
+  if (prof.plan.length) {
+    prof.plan.forEach(function (x, i) {
+      L.push((i + 1) + ". " + x.gap);
+      L.push("   - 下一步：" + x.action);
+      if (x.source) {
+        L.push("   - 出处：" + x.source.doc + (x.source.locator ? "（" + x.source.locator + "）" : ""));
+      }
+    });
+  } else { L.push("暂无"); }
+  L.push("");
+  L.push("## 复习节奏");
+  L.push("");
+  (prof.sched || []).forEach(function (s) {
+    L.push("- " + s.front + "：间隔 " + s.interval_days + " 天，难度系数 " + s.ease
+      + (s.due_in_days ? "，" + s.due_in_days + " 天后复习" : "，今天到期"));
+  });
+  L.push("");
+  L.push("> 本报告由本地原型生成，记录只存在本机匿名编号下；内容为演示占位，正式版以团队审核资料为准。");
+  var blob = new Blob([L.join(NL)], { type: "text/markdown;charset=utf-8" });
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "学习报告-" + new Date().toISOString().slice(0, 10) + ".md";
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+
+function advApplyTheme(t) {
+  document.documentElement.setAttribute("data-theme", t);
+  var b = document.getElementById("theme-btn");
+  if (b) {
+    b.setAttribute("aria-pressed", t === "dark" ? "true" : "false");
+    b.textContent = t === "dark" ? "切换为浅色" : "切换为深色";
+  }
+  try { localStorage.setItem("medta_theme", t); } catch (e) {}
+}
+
+function advToggleTheme() {
+  var cur = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+  advApplyTheme(cur === "dark" ? "light" : "dark");
+}
+
+function advSpeak() {
+  if (!window.speechSynthesis || !DECK.length) { return; }
+  var c = DECK[deckIndex];
+  if (!c) { return; }
+  window.speechSynthesis.cancel();
+  var u = new SpeechSynthesisUtterance(c.front + "。" + c.answer);
+  u.lang = "zh-CN";
+  u.rate = 0.95;
+  window.speechSynthesis.speak(u);
+}
+
+function advLoad() {
+  return Promise.all([
+    getJSON("/api/profile/" + encodeURIComponent(sid)),
+    getJSON("/api/cards?sid=" + encodeURIComponent(sid))
+  ]).then(function (r) {
+    ADV.profile = r[0];
+    ADV.cards = r[1] || [];
+    advRenderMasthead();
+    advRenderGauge();
+    advRenderHeat();
+    advRenderSched();
+  }).catch(function () {});
+}
+
+(function advInit() {
+  var saved = null;
+  try { saved = localStorage.getItem("medta_theme"); } catch (e) {}
+  if (!saved) {
+    saved = (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches)
+      ? "dark" : "light";
+  }
+  advApplyTheme(saved);
+
+  var tb = document.getElementById("theme-btn");
+  if (tb) { tb.addEventListener("click", advToggleTheme); }
+
+  var tts = document.getElementById("card-tts");
+  if (tts) {
+    if (window.speechSynthesis && window.SpeechSynthesisUtterance) {
+      tts.addEventListener("click", advSpeak);
+    } else {
+      tts.classList.add("hidden");
+    }
+  }
+
+  var rb = document.getElementById("report-btn");
+  if (rb) { rb.addEventListener("click", advExportReport); }
+
+  var chk = document.getElementById("card-due");
+  if (chk) { chk.addEventListener("change", function () { loadDeck(); }); }
+
+  var input = document.getElementById("palette-input");
+  if (input) {
+    input.addEventListener("input", function () { ADV.idx = 0; advPaintPalette(input.value); });
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        ADV.idx = Math.min(ADV.idx + 1, ADV.items.length - 1);
+        advPaintPalette(input.value);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        ADV.idx = Math.max(ADV.idx - 1, 0);
+        advPaintPalette(input.value);
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        advRunPalette(ADV.idx);
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        advClosePalette();
+      }
+    });
+  }
+  var pal = document.getElementById("palette");
+  if (pal) {
+    pal.addEventListener("click", function (e) { if (e.target === pal) { advClosePalette(); } });
+  }
+
+  document.addEventListener("keydown", function (e) {
+    if ((e.ctrlKey || e.metaKey) && (e.key === "k" || e.key === "K")) {
+      e.preventDefault();
+      advOpenPalette();
+      return;
+    }
+    if (e.key === "Escape") { advClosePalette(); return; }
+    var tag = (e.target.tagName || "").toLowerCase();
+    if (tag === "input" || tag === "textarea" || tag === "select") { return; }
+    if (e.key === "/") {
+      e.preventDefault();
+      show("ask");
+      var q = document.getElementById("q");
+      if (q) { q.focus(); }
+      return;
+    }
+    if (e.key >= "1" && e.key <= "4") {
+      show({ "1": "ask", "2": "cards", "3": "quiz", "4": "profile" }[e.key]);
+    }
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll(".nav-btn"), function (b) {
+    b.addEventListener("click", function () { setTimeout(advLoad, 150); });
+  });
+  window.addEventListener("hashchange", function () { setTimeout(advLoad, 150); });
+
+  advLoad();
+  setTimeout(advLoad, 900);
+})();
+</script>
+</body>
+</html>

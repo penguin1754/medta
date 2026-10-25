@@ -1,0 +1,46 @@
+[
+  {
+    "id": "q_axillary_scope",
+    "point_id": "pt_axillary",
+    "chapter": "上肢",
+    "stem": "肱骨外科颈骨折最易损伤的神经是？",
+    "options": ["腋神经", "桡神经", "正中神经", "尺神经"],
+    "answer_index": 0,
+    "explain": "腋神经穿四边孔后绕肱骨外科颈走行，紧邻外科颈，骨折端移位时最易受损。",
+    "source": {"doc": "占位：待替换为团队审核资料", "locator": "上肢 / 臂丛与上肢神经"},
+    "origin": "placeholder"
+  },
+  {
+    "id": "q_radial_midshaft",
+    "point_id": "pt_radial",
+    "chapter": "上肢",
+    "stem": "肱骨中段骨折后患者出现垂腕，最可能损伤的神经是？",
+    "options": ["腋神经", "肌皮神经", "桡神经", "尺神经"],
+    "answer_index": 2,
+    "explain": "桡神经沿肱骨桡神经沟下行并紧贴骨面，中段骨折易损伤，前臂伸肌群瘫痪表现为垂腕。",
+    "source": {"doc": "占位：待替换为团队审核资料", "locator": "上肢 / 肱骨与桡神经沟"},
+    "origin": "placeholder"
+  },
+  {
+    "id": "q_median_carpal",
+    "point_id": "pt_median",
+    "chapter": "上肢",
+    "stem": "腕管综合征主要受压的神经是？",
+    "options": ["尺神经", "正中神经", "桡神经浅支", "腋神经"],
+    "answer_index": 1,
+    "explain": "腕管内走行的是正中神经，受压后出现桡侧三个半手指掌面感觉障碍与鱼际肌萎缩。",
+    "source": {"doc": "占位：待替换为团队审核资料", "locator": "上肢 / 腕管"},
+    "origin": "placeholder"
+  },
+  {
+    "id": "q_ulnar_epicondyle",
+    "point_id": "pt_ulnar",
+    "chapter": "上肢",
+    "stem": "肱骨内上髁骨折最容易损伤的神经是？",
+    "options": ["桡神经", "腋神经", "正中神经", "尺神经"],
+    "answer_index": 3,
+    "explain": "尺神经经肱骨内上髁后方的尺神经沟下行、位置表浅，内上髁骨折时易受损。",
+    "source": {"doc": "占位：待替换为团队审核资料", "locator": "上肢 / 肱骨内上髁与尺神经沟"},
+    "origin": "placeholder"
+  }
+]
