@@ -95,12 +95,49 @@ def _load(name):
         return json.load(f)
 
 
+def _load_optional(name):
+    path = KNOW / name
+    if not path.exists():
+        return []
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
 CARDS = _load("cards.json")
 QUIZ = _load("quiz.json")
+SA = _load_optional("short_answer.json")
 CARD_BY_ID = {c["id"]: c for c in CARDS}
 CARD_BY_POINT = {c["point_id"]: c for c in CARDS}
 QUIZ_BY_ID = {q["id"]: q for q in QUIZ}
+SA_BY_ID = {s["id"]: s for s in SA}
+SA_CHAPTERS = sorted({s["chapter"] for s in SA})
 CHAPTERS = sorted({c["chapter"] for c in CARDS})
+
+
+_PUNCT = "　 \t\r\n，。、；：？！“”‘’（）()《》〈〉…—·,.;:?!\"'`~@#$%^&*_+=|\\/[]{}<>"
+
+
+def _norm_text(text):
+    out = []
+    for ch in (text or "").lower():
+        if ch not in _PUNCT:
+            out.append(ch)
+    return "".join(out)
+
+
+def score_short_answer(item, text):
+    """按要点关键词命中率打分，纯字符串匹配，可复核、可复现。
+
+    命中 = 要点词出现在作答里（忽略标点、空格、大小写）。
+    得分 = 命中要点数 / 要点总数，四舍五入到整数百分比。
+    """
+    keys = [k for k in (item.get("keys") or []) if k]
+    body = _norm_text(text)
+    hits = [k for k in keys if _norm_text(k) in body]
+    missed = [k for k in keys if k not in hits]
+    score = int(round(100.0 * len(hits) / len(keys))) if keys else 0
+    return {"score": score, "hits": hits, "missed": missed,
+            "passed": 1 if score >= 80 else 0}
 
 
 class EngineError(RuntimeError):
@@ -138,6 +175,13 @@ class Store:
             self.conn.execute(
                 "create table if not exists usage(sid text, day text, calls int,"
                 " primary key(sid, day))")
+            self.conn.execute(
+                "create table if not exists plan_state(sid text primary key,"
+                " exam_date text, updated_ts int)")
+            self.conn.execute(
+                "create table if not exists sa_state(sid text, said text, chapter text,"
+                " score int, passed int, hits text, last_ts int, attempts int,"
+                " primary key(sid, said))")
             self._migrate()
             self.conn.commit()
 
@@ -251,6 +295,139 @@ class Store:
             self.record_gap(sid, item["point_id"], item["stem"], item["chapter"])
         return ok
 
+    # ── 考前冲刺：把剩下的卡片摊到考试日之前 ────────────────────────
+    def answer_short(self, sid, item, text):
+        """简答题：先按要点命中率判分，再记进度；不及格进复习清单。"""
+        res = score_short_answer(item, text)
+        with _lock:
+            self.conn.execute(
+                "insert into sa_state(sid, said, chapter, score, passed, hits, last_ts, attempts)"
+                " values(?,?,?,?,?,?,?,1)"
+                " on conflict(sid, said) do update set score=excluded.score,"
+                " passed=excluded.passed, hits=excluded.hits, last_ts=excluded.last_ts,"
+                " attempts=attempts+1",
+                (sid, item["id"], item["chapter"], res["score"], res["passed"],
+                 json.dumps(res["hits"], ensure_ascii=False), _now()))
+            self.conn.commit()
+        self.log(sid, "sa", item["id"], str(res["score"]))
+        if res["passed"]:
+            self.close_gap(sid, "sa:" + item["id"])
+        else:
+            self.record_gap(sid, "sa:" + item["id"], item["question"], item["chapter"])
+        return res
+
+    def set_exam(self, sid, exam_date):
+        with _lock:
+            self.conn.execute(
+                "insert into plan_state(sid, exam_date, updated_ts) values(?,?,?)"
+                " on conflict(sid) do update set exam_date=excluded.exam_date,"
+                " updated_ts=excluded.updated_ts", (sid, exam_date, _now()))
+            self.conn.commit()
+
+    def exam_date(self, sid):
+        with _lock:
+            row = self.conn.execute(
+                "select exam_date from plan_state where sid=?", (sid,)).fetchone()
+        return row[0] if row else ""
+
+    def sprint(self, sid, horizon=7):
+        """考前冲刺排期。全部是确定性算术，不含模型：
+
+            每日配额 = ceil(待掌握张数 / 剩余天数)，上限 60 张，且不超过待掌握总数
+            章节配额 = 每日配额按「该章未掌握张数」占比分配，小数用最大余数法补齐
+            今日清单 = 每章按 已到复习期 > 之前没记住 > 没学过 的顺序取满配额
+        """
+        exam = self.exam_date(sid)
+        today = date.today()
+        try:
+            exam_day = date.fromisoformat(exam) if exam else today + timedelta(days=30)
+        except ValueError:
+            exam_day = today + timedelta(days=30)
+        days_left = max(1, (exam_day - today).days)
+
+        with _lock:
+            rows = self.conn.execute(
+                "select card_id, status, due_ts from card_state where sid=?", (sid,)).fetchall()
+            answered = {r[0] for r in self.conn.execute(
+                "select distinct qid from quiz_state where sid=?", (sid,)).fetchall()}
+        state = {r[0]: r for r in rows}
+
+        per_chapter = []
+        for ch in CHAPTERS:
+            ch_cards = [c for c in CARDS if c["chapter"] == ch]
+            got = sum(1 for c in ch_cards
+                      if state.get(c["id"]) and state[c["id"]][1] == "mastered")
+            per_chapter.append({"chapter": ch, "total": len(ch_cards), "mastered": got,
+                                "remaining": len(ch_cards) - got})
+        remaining = sum(x["remaining"] for x in per_chapter)
+        pace = remaining / float(days_left)
+        daily = 0 if remaining == 0 else min(remaining, max(1, min(60, -(-remaining // days_left))))
+
+        quotas = {x["chapter"]: 0 for x in per_chapter}
+        if remaining and daily:
+            exact = {x["chapter"]: daily * x["remaining"] / float(remaining)
+                     for x in per_chapter if x["remaining"]}
+            for ch, val in exact.items():
+                quotas[ch] = int(val)
+            short = daily - sum(quotas.values())
+            for ch in sorted(exact, key=lambda k: exact[k] - int(exact[k]), reverse=True)[:short]:
+                quotas[ch] += 1
+            for x in per_chapter:
+                quotas[x["chapter"]] = min(quotas[x["chapter"]], x["remaining"])
+
+        now = _now()
+        picks = []
+        for x in per_chapter:
+            ch, quota = x["chapter"], quotas[x["chapter"]]
+            if quota <= 0:
+                continue
+            cands = []
+            for c in CARDS:
+                if c["chapter"] != ch:
+                    continue
+                row = state.get(c["id"])
+                if row and row[1] == "mastered":
+                    continue
+                due_ts = row[2] if row else 0
+                rank = 0 if (row and due_ts <= now) else (1 if row else 2)
+                cands.append((rank, due_ts, c, row))
+            cands.sort(key=lambda t: (t[0], t[1]))
+            for rank, due_ts, c, row in cands[:quota]:
+                picks.append({
+                    "card_id": c["id"], "front": c["front"], "chapter": ch,
+                    "status": row[1] if row else "unseen",
+                    "reason": "已到复习期" if rank == 0 else ("之前没记住" if rank == 1 else "还没学过"),
+                })
+
+        preview, left = [], remaining
+        for k in range(horizon):
+            day_left = max(1, days_left - k)
+            per_day = 0 if left <= 0 else max(1, min(left, -(-left // day_left)))
+            left -= per_day
+            preview.append({"date": (today + timedelta(days=k)).isoformat(),
+                            "cards": per_day, "left_after": left})
+            if left <= 0:
+                break
+
+        quiz_left = max(0, len(QUIZ) - len(answered))
+        daily_quiz = 0 if not quiz_left else max(5, min(40, -(-quiz_left // days_left)))
+        return {
+            "exam_date": exam_day.isoformat(),
+            "days_left": days_left,
+            "cards_total": len(CARDS),
+            "mastered": len(CARDS) - remaining,
+            "remaining": remaining,
+            "pace": round(pace, 2),
+            "daily_cards": daily,
+            "daily_quiz": daily_quiz,
+            "quiz_left": quiz_left,
+            "feasible": pace <= 60,
+            "chapters": sorted(per_chapter, key=lambda x: -x["remaining"]),
+            "quotas": quotas,
+            "today": picks,
+            "preview": preview,
+        }
+
     def card_status(self, sid, card_id):
         with _lock:
             row = self.conn.execute(
@@ -323,6 +500,8 @@ class Store:
             gaps = self.conn.execute(
                 "select point_id, label, chapter, count, status from gaps where sid=?"
                 " order by status asc, count desc", (sid,)).fetchall()
+            short_rows = self.conn.execute(
+                "select said, score, passed from sa_state where sid=?", (sid,)).fetchall()
             events = self.conn.execute(
                 "select count(*) from events where sid=?", (sid,)).fetchone()
         state = {r[0]: r[1] for r in cards}
@@ -399,6 +578,9 @@ class Store:
                 "open_gaps": len(open_gaps), "wrong": len(wrong),
                 "events": int(events[0]) if events else 0,
                 "due": due_now, "streak": streak,
+                "sa_total": len(SA),
+                "sa_practiced": len(short_rows),
+                "sa_passed": sum(1 for r in short_rows if r[2]),
             },
             "chapters": chapters,
             "gaps": open_gaps,
