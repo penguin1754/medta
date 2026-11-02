@@ -475,6 +475,8 @@ def page_sprint():
         default = date.fromisoformat(cur) if cur else date.today() + timedelta(days=30)
     except ValueError:
         default = date.today() + timedelta(days=30)
+    if default < date.today():  # 考试日已过，别让 date_input 因为越界报错
+        default = date.today() + timedelta(days=30)
     picked = st.date_input("考试日期", value=default, min_value=date.today(),
                            max_value=date.today() + timedelta(days=365), key="exam_pick")
     if picked.isoformat() != cur:
