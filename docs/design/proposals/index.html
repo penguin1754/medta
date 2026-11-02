@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MedTA 视觉方向对比</title>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;background:#f2f5f5;color:#17272b;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif}
+    header{max-width:1320px;margin:0 auto;padding:44px 32px 24px;display:flex;align-items:flex-end;justify-content:space-between;gap:24px}
+    h1{margin:0;font-size:34px;font-weight:650;letter-spacing:-.035em}
+    header p{margin:6px 0 0;color:#62767c;font-size:13px}
+    .note{max-width:30em;font-size:12px;line-height:1.7;color:#6a7d82}
+    .grid{max-width:1320px;margin:0 auto;padding:0 32px 50px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+    .item{background:#fff;border:1px solid #dbe4e5;border-radius:18px;overflow:hidden;box-shadow:0 22px 50px -40px rgba(25,54,60,.6)}
+    .thumb{position:relative;height:252px;overflow:hidden;background:#e8eeee;border-bottom:1px solid #dbe4e5}
+    iframe{position:absolute;left:0;top:0;width:1440px;height:960px;border:0;transform:scale(.275);transform-origin:0 0;pointer-events:none}
+    .meta{padding:17px 18px 18px}
+    .meta h2{margin:0;font-size:17px;font-weight:650}
+    .meta p{margin:7px 0 0;font-size:12px;line-height:1.65;color:#667a7f;min-height:40px}
+    .meta a{display:inline-block;margin-top:12px;font-size:12px;font-weight:600;color:#235d6a}
+    .swatches{display:flex;gap:5px;margin-top:12px}
+    .swatches i{width:16px;height:16px;border-radius:50%;border:1px solid rgba(0,0,0,.08)}
+    @media (max-width:980px){.grid{grid-template-columns:1fr}.thumb{height:220px}iframe{transform:scale(.24)}}
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>三套视觉方向</h1>
+      <p>同一张知识卡、同一组数据，只比较设计语言。</p>
+    </div>
+    <div class="note">建议先看 A 的整体质感，再看 C 的医学识别度。A + C 是我会优先落地的组合。</div>
+  </header>
+  <main class="grid">
+    <article class="item">
+      <div class="thumb"><iframe src="scheme-a-clinic.html" title="方案 A 预览"></iframe></div>
+      <div class="meta">
+        <h2>方案 A · 冷白诊室</h2>
+        <p>冷白玻璃、钢蓝强调色。最接近 Apple 质感，也最适合课堂投影。</p>
+        <div class="swatches"><i style="background:#edf2f3"></i><i style="background:#286a78"></i><i style="background:#86b9c3"></i><i style="background:#14262c"></i></div>
+        <a href="scheme-a-clinic.html">打开完整方案</a>
+      </div>
+    </article>
+    <article class="item">
+      <div class="thumb"><iframe src="scheme-b-night.html" title="方案 B 预览"></iframe></div>
+      <div class="meta">
+        <h2>方案 B · 夜间阅片室</h2>
+        <p>深石墨与冷蓝玻璃。演示最有冲击力，但需要准备浅色回退。</p>
+        <div class="swatches"><i style="background:#070c10"></i><i style="background:#9ecfdb"></i><i style="background:#d8a46d"></i><i style="background:#ecf3f5"></i></div>
+        <a href="scheme-b-night.html">打开完整方案</a>
+      </div>
+    </article>
+    <article class="item">
+      <div class="thumb"><iframe src="scheme-c-atlas.html" title="方案 C 预览"></iframe></div>
+      <div class="meta">
+        <h2>方案 C · 解剖图谱台</h2>
+        <p>冷灰纸面与图谱标注。医学识别度最高，玻璃只做点睛。</p>
+        <div class="swatches"><i style="background:#e9eff0"></i><i style="background:#9f3b34"></i><i style="background:#3f707c"></i><i style="background:#162528"></i></div>
+        <a href="scheme-c-atlas.html">打开完整方案</a>
+      </div>
+    </article>
+  </main>
+</body>
+</html>

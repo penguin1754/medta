@@ -9,3 +9,7 @@ __pycache__/
 
 # 原始扫描件体积大且为第三方资料，不入库
 data_in/*.pdf
+
+# 本地验收产物，可由 tools/ui_shots.py、docs/design/proposals/render.py 重新生成
+docs/design/clinic/screens/
+docs/design/proposals/renders/

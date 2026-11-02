@@ -18,6 +18,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
@@ -26,7 +27,7 @@ st.set_page_config(
     page_title="医学课程 AI 助教 · 系统解剖学",
     page_icon="🫀",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="auto",
 )
 
 
@@ -50,7 +51,7 @@ _load_secrets()
 import backend.app as core  # noqa: E402  （必须先注入 Secrets 再导入）
 
 
-CSS = """
+LEGACY_CSS = """
 <style>
 :root{
   --ground:#E8E6DF; --paper:#FCFBF7; --card:#FFFFFF; --tint:#F3F1E9;
@@ -188,7 +189,19 @@ h1,h2,h3{font-family:"Songti SC","SimSun","宋体",serif !important;font-weight:
 @media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important}}
 </style>
 """
-st.markdown(CSS, unsafe_allow_html=True)
+
+
+def _theme_css():
+    """读取冷白诊室主题；CSS 放在 frontend/ 便于单独维护。"""
+    parts = []
+    for name in ("clinic.css", "clinic-mobile.css"):
+        path = ROOT / "frontend" / name
+        if path.exists():
+            parts.append(path.read_text(encoding="utf-8"))
+    return "<style>\n" + "\n".join(parts) + "\n</style>"
+
+
+st.markdown(_theme_css(), unsafe_allow_html=True)
 
 ROUTE_TEXT = {
     "local_card": "来源：本地已审核知识卡，未消耗在线额度。",
@@ -245,20 +258,86 @@ def _render_messages():
                 st.caption(msg["meta"])
 
 
+PANEL_META = {
+    "课程问答": ("课程问答", "只回答系统解剖学相关问题，优先依据课程资料；资料里没有的会明确说不知道。"),
+    "知识点速记": ("知识点速记", "先自己回忆，再翻面核对；系统按间隔重复安排下一次复习。"),
+    "自测练习": ("自测练习", "选择题即时判分；简答题按要点命中率打分，同一份作答结果永远一致。"),
+    "考前冲刺": ("考前冲刺", "填考试日期，按还没掌握的张数除以剩余天数，倒排每天的复习量。"),
+    "学习档案": ("学习档案", "所有记录只存在这台服务器上，用匿名 sid 区分，不采集姓名和学号。"),
+}
+
+
+def _reset_scroll_on_nav(panel):
+    """首次进入或切换模块时回到页首；同页交互不打断阅读。"""
+    if st.session_state.get("_scroll_panel") == panel:
+        return
+    st.session_state["_scroll_panel"] = panel
+    components.html(
+        """<script>
+const doc = window.parent.document;
+let ticks = 0;
+const toTop = () => {
+  const box = doc.querySelector('[data-testid="stAppScrollToBottomContainer"]');
+  if (box) box.scrollTop = 0;
+  if (++ticks < 14) setTimeout(toTop, 80);
+};
+toTop();
+</script>""",
+        height=0,
+    )
+
+
+def _page_header(panel, sid):
+    """页面顶栏和学习快照；数据来自本地学习记录，不调用模型。"""
+    title, lede = PANEL_META[panel]
+    prof = core.STORE.profile(sid)
+    plan = core.STORE.sprint(sid)
+    overview = prof["overview"]
+    total = max(1, int(overview["cards_total"]))
+    mastered = int(overview["mastered"])
+    pct = int(round(100 * mastered / total))
+    due = int(overview["due"])
+    days_left = int(plan["days_left"])
+    daily_cards = int(plan["daily_cards"])
+    st.markdown(
+        '<div class="app-topbar">'
+        '<div class="app-context">系统解剖学 / ' + html.escape(title) + '</div>'
+        '<div class="app-status"><i></i>记录已保存</div>'
+        '</div>'
+        '<section class="page-hero">'
+        '<div class="page-hero-copy"><h1>' + html.escape(title) + '</h1>'
+        '<p>' + html.escape(lede) + '</p></div>'
+        '<div class="hero-metrics">'
+        '<div class="hero-metric"><div class="hero-metric-label">今日待复习</div>'
+        '<div class="hero-metric-line"><div class="hero-metric-value">' + str(due)
+        + '<small>张卡</small></div></div>'
+        '<div class="hero-metric-note">已掌握 ' + str(mastered) + ' 张</div></div>'
+        '<div class="hero-metric"><div class="hero-metric-label">掌握度</div>'
+        '<div class="hero-metric-line"><div class="hero-metric-value">' + str(pct)
+        + '<small>%</small></div><div class="hero-ring" style="--value:' + str(pct)
+        + '%"></div></div>'
+        '<div class="hero-metric-note">' + str(mastered) + ' / ' + str(total) + ' 张知识卡</div></div>'
+        '<div class="hero-metric dark"><div class="hero-metric-label">距离考试</div>'
+        '<div class="hero-metric-line"><div class="hero-metric-value">' + str(days_left)
+        + '<small>天</small></div></div>'
+        '<div class="hero-metric-note">每天约 ' + str(daily_cards) + ' 张，按日期倒排</div></div>'
+        '</div></section>',
+        unsafe_allow_html=True,
+    )
+
+
 def page_ask():
-    st.markdown('<div class="panel-kicker">01 / 问答</div>', unsafe_allow_html=True)
-    st.markdown("## 课程问答")
-    st.caption("只回答系统解剖学相关问题，优先依据课程资料；资料里没有的会明确说不知道。")
     if "messages" not in st.session_state:
         st.session_state.messages = []
     if st.session_state.pop("pending_q", None):
         _ask(st.session_state.pop("_pending_text"))
-    cols = st.columns(len(QUESTIONS))
-    for i, (text, col) in enumerate(zip(QUESTIONS, cols)):
-        if col.button(text, key="chip" + str(i), use_container_width=True):
-            st.session_state.pending_q = True
-            st.session_state._pending_text = text
-            st.rerun()
+    with st.container(key="ask_chips"):
+        cols = st.columns(len(QUESTIONS))
+        for i, (text, col) in enumerate(zip(QUESTIONS, cols)):
+            if col.button(text, key="chip" + str(i), use_container_width=True):
+                st.session_state.pending_q = True
+                st.session_state._pending_text = text
+                st.rerun()
     if not st.session_state.messages:
         st.info("先点上面一个问题，或在下面输入框里提问。")
     _render_messages()
@@ -299,12 +378,10 @@ def _flip_card_html(card, revealed):
 
 def page_cards():
     sid = _sid()
-    st.markdown('<div class="panel-kicker">02 / 速记</div>', unsafe_allow_html=True)
-    st.markdown("## 知识点速记")
-    st.caption("先自己回忆，再翻面核对；系统按间隔重复安排下一次复习。")
-    c1, c2 = st.columns([2, 1])
-    chapter = c1.selectbox("章节", ["全部"] + list(core.CHAPTERS), key="card_chapter")
-    due_only = c2.checkbox("只看今天到期", value=False, key="card_due")
+    with st.container(key="card_filters"):
+        c1, c2 = st.columns([2, 1])
+        chapter = c1.selectbox("章节", ["全部"] + list(core.CHAPTERS), key="card_chapter")
+        due_only = c2.checkbox("只看今天到期", value=False, key="card_due")
     deck = [c for c in core.CARDS if chapter == "全部" or c["chapter"] == chapter]
     if due_only:
         deck = [c for c in deck if core.STORE.sched_state(sid, c["id"])["due_ts"] <= core._now()]
@@ -345,9 +422,6 @@ def page_cards():
 
 
 def page_quiz():
-    st.markdown('<div class="panel-kicker">03 / 自测</div>', unsafe_allow_html=True)
-    st.markdown("## 自测练习")
-    st.caption("选择题即时判分；简答题按要点命中率打分，都是确定性规则，同一份作答结果永远一致。")
     tab_choice, tab_short = st.tabs(["选择题", "简答题"])
     with tab_choice:
         _quiz_choice()
@@ -357,15 +431,16 @@ def page_quiz():
 
 def _quiz_choice():
     sid = _sid()
-    c1, c2, c3 = st.columns([2, 1, 1])
-    chapter = c1.selectbox("章节", ["全部"] + list(core.CHAPTERS), key="quiz_chapter")
-    n = c2.number_input("题量", 1, 20, 4, key="quiz_n")
-    if c3.button("换一组", use_container_width=True):
-        pool = [q for q in core.QUIZ if chapter == "全部" or q["chapter"] == chapter]
-        st.session_state.quiz_items = pool[:int(n)]
-        st.session_state.quiz_i = 0
-        st.session_state.quiz_result = None
-        st.rerun()
+    with st.container(key="quiz_filters"):
+        c1, c2, c3 = st.columns([2, 1, 1])
+        chapter = c1.selectbox("章节", ["全部"] + list(core.CHAPTERS), key="quiz_chapter")
+        n = c2.number_input("题量", 1, 20, 4, key="quiz_n")
+        if c3.button("换一组", use_container_width=True):
+            pool = [q for q in core.QUIZ if chapter == "全部" or q["chapter"] == chapter]
+            st.session_state.quiz_items = pool[:int(n)]
+            st.session_state.quiz_i = 0
+            st.session_state.quiz_result = None
+            st.rerun()
     if "quiz_items" not in st.session_state:
         st.session_state.quiz_items = list(core.QUIZ)[:4]
         st.session_state.quiz_i = 0
@@ -411,9 +486,10 @@ def _quiz_short():
     if not core.SA:
         st.info("简答题库为空。先运行 `python tools/build_short_answer.py`。")
         return
-    c1, c2 = st.columns([2, 1])
-    chapter = c1.selectbox("章节", ["全部"] + list(core.SA_CHAPTERS), key="sa_chapter")
-    deck = [s for s in core.SA if chapter == "全部" or s["chapter"] == chapter]
+    with st.container(key="sa_filters"):
+        c1, c2 = st.columns([2, 1])
+        chapter = c1.selectbox("章节", ["全部"] + list(core.SA_CHAPTERS), key="sa_chapter")
+        deck = [s for s in core.SA if chapter == "全部" or s["chapter"] == chapter]
     if not deck:
         st.warning("这个章节还没有简答题。")
         return
@@ -466,10 +542,6 @@ def _quiz_short():
 
 def page_sprint():
     sid = _sid()
-    st.markdown('<div class="panel-kicker">04 / 冲刺</div>', unsafe_allow_html=True)
-    st.markdown("## 考前冲刺")
-    st.caption("填考试日期，按「还没掌握的张数 ÷ 剩余天数」倒排每天的复习量。"
-               "全是算术，没有模型参与，可以手算核对。")
     cur = core.STORE.exam_date(sid)
     try:
         default = date.fromisoformat(cur) if cur else date.today() + timedelta(days=30)
@@ -482,11 +554,12 @@ def page_sprint():
     if picked.isoformat() != cur:
         core.STORE.set_exam(sid, picked.isoformat())
     plan = core.STORE.sprint(sid)
-    a, b, c, d = st.columns(4)
-    a.metric("距考试", str(plan["days_left"]) + " 天")
-    b.metric("待掌握", str(plan["remaining"]) + " / " + str(plan["cards_total"]))
-    c.metric("今天卡片", str(plan["daily_cards"]) + " 张")
-    d.metric("今天题目", str(plan["daily_quiz"]) + " 道")
+    with st.container(key="sprint_metrics"):
+        a, b, c, d = st.columns(4)
+        a.metric("距考试", str(plan["days_left"]) + " 天")
+        b.metric("待掌握", str(plan["remaining"]) + " / " + str(plan["cards_total"]))
+        c.metric("今天卡片", str(plan["daily_cards"]) + " 张")
+        d.metric("今天题目", str(plan["daily_quiz"]) + " 道")
     if plan["remaining"] == 0:
         st.success("卡片已经全部掌握，接下来按间隔重复维持就行。")
     elif plan["feasible"]:
@@ -518,30 +591,29 @@ def page_sprint():
     else:
         st.info("今天没有待复习的卡片。")
     st.markdown("### 接下来几天")
-    cols = st.columns(len(plan["preview"]))
-    for col, day in zip(cols, plan["preview"]):
-        col.metric(day["date"][5:], str(day["cards"]) + " 张",
-                   delta=("剩 " + str(day["left_after"])) if day["left_after"] else "收尾")
+    with st.container(key="sprint_preview"):
+        cols = st.columns(len(plan["preview"]))
+        for col, day in zip(cols, plan["preview"]):
+            col.metric(day["date"][5:], str(day["cards"]) + " 张",
+                       delta=("剩 " + str(day["left_after"])) if day["left_after"] else "收尾")
 
 
 def page_profile():
     sid = _sid()
-    st.markdown('<div class="panel-kicker">04 / 档案</div>', unsafe_allow_html=True)
-    st.markdown("## 学习档案")
-    st.caption("所有记录只存在这台服务器上，用匿名 sid 区分，不采集姓名和学号。")
     prof = core.STORE.profile(sid)
     o = prof["overview"]
-    a, b, c, d, e = st.columns(5)
-    a.metric("已掌握", str(o["mastered"]) + " / " + str(o["cards_total"]))
-    b.metric("自测正确率", str(o["accuracy"]) + "%")
-    c.metric("简答通过", str(o["sa_passed"]) + " / " + str(o["sa_total"]))
-    d.metric("待复习", str(o["due"]))
-    e.metric("连续学习", str(o["streak"]) + " 天")
+    with st.container(key="profile_metrics"):
+        a, b, c, d, e = st.columns(5)
+        a.metric("已掌握", str(o["mastered"]) + " / " + str(o["cards_total"]))
+        b.metric("自测正确率", str(o["accuracy"]) + "%")
+        c.metric("简答通过", str(o["sa_passed"]) + " / " + str(o["sa_total"]))
+        d.metric("待复习", str(o["due"]))
+        e.metric("连续学习", str(o["streak"]) + " 天")
     pct = int(round(100 * o["mastered"] / max(1, o["cards_total"])))
     off = round(289 * (1 - pct / 100.0), 1)
     st.markdown('<div class="ring-wrap"><svg width="104" height="104" viewBox="0 0 110 110">'
-                '<circle cx="55" cy="55" r="46" fill="none" stroke="#EDEBE2" stroke-width="7"/>'
-                '<circle class="ring-arc" cx="55" cy="55" r="46" fill="none" stroke="#2F5B82"'
+                '<circle cx="55" cy="55" r="46" fill="none" stroke="#DCE7E9" stroke-width="7"/>'
+                '<circle class="ring-arc" cx="55" cy="55" r="46" fill="none" stroke="#286A78"'
                 ' stroke-width="7" stroke-linecap="round" stroke-dasharray="289"'
                 ' stroke-dashoffset="' + str(off) + '" transform="rotate(-90 55 55)"/></svg>'
                 '<div><div class="ring-num">' + str(pct) + '%</div>'
@@ -581,31 +653,47 @@ sid = _sid()
 if st.session_state.get("nav_pending"):
     st.session_state.nav = st.session_state.pop("nav_pending")
 with st.sidebar:
-    st.markdown('<div class="side-brand">MEDTA</div>', unsafe_allow_html=True)
-    st.markdown('<div class="side-sub">系统解剖学 · 学习台</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="side-lockup">'
+        '<div class="side-mark" aria-hidden="true">'
+        '<svg viewBox="0 0 24 24"><g fill="none" stroke="#DCEBED" stroke-width="1.35">'
+        '<path d="M12 3.2c4.6 0 8.2 3.8 8.2 8.4S16.6 20 12 20s-8.2-3.8-8.2-8.4S7.4 3.2 12 3.2Z"/>'
+        '<path d="M12 6.5c2.8 0 4.9 2.3 4.9 5.1s-2.1 5.2-4.9 5.2-4.9-2.3-4.9-5.2 2.1-5.1 4.9-5.1Z"/>'
+        '<path d="M12 9.7c1.1 0 1.9.9 1.9 2s-.8 2-1.9 2-1.9-.9-1.9-2 .8-2 1.9-2Z"/>'
+        '</g></svg></div>'
+        '<div><div class="side-brand">MEDTA</div><div class="side-sub">系统解剖学</div></div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
     panel = st.radio("模块", ["课程问答", "知识点速记", "自测练习", "考前冲刺", "学习档案"],
                      label_visibility="collapsed", key="nav")
-    st.markdown("---")
+    st.markdown('<div class="side-divider"></div>', unsafe_allow_html=True)
     quota = core._quota(sid)
     if core.coze_available():
-        st.markdown('<div class="side-stat"><b>' + str(quota["user_used"]) + "/" + str(quota["user_limit"])
-                    + '</b> 今日提问<br><span>全站 ' + str(quota["coze_calls"]) + "/"
-                    + str(quota["coze_max"]) + " 次</span></div>", unsafe_allow_html=True)
+        st.markdown(
+            '<div class="side-panel"><div class="side-panel-label">今日提问</div>'
+            '<div class="side-panel-value">' + str(quota["user_used"]) + '<small>/ '
+            + str(quota["user_limit"]) + '</small></div>'
+            '<div class="side-panel-note">全站已用 ' + str(quota["coze_calls"]) + ' / '
+            + str(quota["coze_max"]) + ' 次</div></div>',
+            unsafe_allow_html=True,
+        )
     else:
-        st.markdown('<div class="side-stat"><b>本地模式</b><br><span>未配置 COZE_PAT</span></div>',
-                    unsafe_allow_html=True)
-    st.markdown("---")
+        st.markdown(
+            '<div class="side-panel"><div class="side-panel-label">在线问答</div>'
+            '<div class="side-panel-value">本地模式</div>'
+            '<div class="side-panel-note">未配置 COZE_PAT，当前只查本地知识卡。</div></div>',
+            unsafe_allow_html=True,
+        )
+    st.markdown('<div class="side-divider"></div>', unsafe_allow_html=True)
     if st.button("清空我的学习记录", use_container_width=True):
         core.STORE.reset(sid)
         st.session_state.messages = []
         st.rerun()
+    st.markdown('<div class="side-privacy">学习记录只保存在这台服务器，用匿名 sid 区分。</div>',
+                unsafe_allow_html=True)
 
-st.markdown('<div class="hero-kicker">郑州大学 · 系统解剖学</div>', unsafe_allow_html=True)
-st.markdown('<div class="hero-title">医学课程 AI 助教</div>', unsafe_allow_html=True)
-st.markdown('<p class="hero-lede">问、记、测、冲刺、看五件事连成一条学习闭环：先问清楚，'
-            '再翻卡记住，用自测检验，按考试日期倒排冲刺，最后在学习档案里看到下一步该补什么。</p>',
-            unsafe_allow_html=True)
-st.markdown('<div class="rule"></div>', unsafe_allow_html=True)
+_page_header(panel, sid)
 
 if panel == "课程问答":
     page_ask()
@@ -617,3 +705,7 @@ elif panel == "考前冲刺":
     page_sprint()
 else:
     page_profile()
+
+_reset_scroll_on_nav(panel)
+
+

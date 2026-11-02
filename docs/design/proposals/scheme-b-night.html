@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>方案 B · 夜间阅片室</title>
+  <link rel="stylesheet" href="base.css">
+  <link rel="stylesheet" href="scheme-b.css">
+</head>
+<body class="scheme-b">
+  <div class="b-noise" aria-hidden="true"></div>
+  <div class="b-edge" aria-hidden="true"><span>期末复习</span></div>
+
+  <header class="b-top">
+    <div class="b-brand">
+      <div class="b-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><g fill="none" stroke="#cfe6eb" stroke-width="1.35"><circle cx="12" cy="12" r="8.2"/><circle cx="12" cy="12" r="4.9"/><circle cx="12" cy="12" r="1.7"/></g></svg>
+      </div>
+      <div>
+        <div class="b-wordmark">MEDTA</div>
+        <div class="b-submark">系统解剖学</div>
+      </div>
+    </div>
+
+    <nav class="b-nav" aria-label="主导航">
+      <a href="#">课程问答</a>
+      <a class="active" href="#" aria-current="page">知识点速记</a>
+      <a href="#">自测练习</a>
+      <a href="#">考前冲刺</a>
+      <a href="#">学习档案</a>
+    </nav>
+
+    <div class="b-topright">
+      <div class="b-save"><i></i>记录已保存</div>
+      <div class="b-avatar" aria-label="林同学">林</div>
+    </div>
+  </header>
+
+  <main class="b-main">
+    <section class="b-copy">
+      <div class="b-eyebrow"><i></i>今晚的复习</div>
+      <h1>把最容易混的三张卡，先过一遍。</h1>
+      <p>肝门静脉、门腔吻合和肝段划分容易在选择题里互换。今晚只处理这一组，不额外加量。</p>
+      <div class="b-countdown">
+        <div class="b-days">26<small>天</small></div>
+        <div class="b-ruler">
+          <div class="b-ruler-label"><span>今天</span><span>系统解剖学期末考试</span></div>
+          <div class="b-ruler-line" aria-hidden="true"></div>
+        </div>
+      </div>
+      <div class="b-statusline">
+        <span>今日待复习 <b>12 张</b></span>
+        <span>已完成 <b>4 张</b></span>
+        <span>掌握度 <b>64%</b></span>
+      </div>
+    </section>
+
+    <article class="b-card" aria-labelledby="b-question">
+      <svg class="b-vessels" viewBox="0 0 460 460" aria-hidden="true">
+        <g fill="none" stroke="#9ecfdb" stroke-width="1.3">
+          <path d="M229 92c1 61 36 80 33 132s-39 72-42 132"/>
+          <path d="M262 224c38-21 56-56 61-93"/>
+          <path d="M196 224c-40-21-56-56-62-95"/>
+          <path d="M262 224c47 8 60 41 75 74"/>
+          <path d="M196 224c-43 14-53 47-62 78"/>
+          <path d="M229 92c-20-12-25-31-21-48M229 92c21-12 25-31 20-48"/>
+        </g>
+        <g fill="#9ecfdb">
+          <circle cx="229" cy="92" r="3.2"/><circle cx="262" cy="224" r="3.2"/><circle cx="196" cy="224" r="3.2"/>
+        </g>
+      </svg>
+      <div class="b-tag"><i></i>循环系统</div>
+      <h2 class="b-question" id="b-question">肝门静脉由哪两条静脉汇合而成？</h2>
+      <p class="b-hint">提示：汇合点在胰头后方。先回忆属支，再想侧支循环。</p>
+      <div class="b-card-foot">
+        <div class="b-index">第 <b>4</b> 张，共 <b>12</b> 张</div>
+        <button class="b-action" type="button">
+          看答案
+          <svg viewBox="0 0 24 24"><path d="M5 12h13M13 7l5 5-5 5"/></svg>
+        </button>
+      </div>
+    </article>
+  </main>
+
+  <div class="b-dock" aria-label="今日学习进度">
+    <div><span class="b-dock-label">今日进度 </span><span class="b-dock-value">4 / 12</span></div>
+    <span class="b-dock-sep"></span>
+    <div class="b-dock-bar"><span></span></div>
+    <span class="b-dock-sep"></span>
+    <div><span class="b-dock-label">本节剩余约 </span><span class="b-dock-value">14 分钟</span></div>
+  </div>
+</body>
+</html>
