@@ -698,6 +698,8 @@ class CozeEngine:
         self.base = base.rstrip("/")
 
     def ask(self, question, conversation_id="", user_id="medta_student"):
+        if any(ord(ch) > 126 for ch in self.pat):
+            raise EngineError("COZE_PAT 含非英文字符，请在 Coze 控制台重新复制令牌")
         payload = {
             "bot_id": self.bot_id,
             "user_id": user_id,
@@ -811,15 +813,37 @@ def _note_coze_error(msg):
     print("[coze] " + (msg or ""), file=sys.stderr)
 
 
+def _clean_token(raw):
+    """去掉粘贴时容易带上的引号、空白与零宽字符；令牌本身不含这些。"""
+    s = (raw or "").strip().strip('"').strip("'")
+    for ch in "\u200b\u200c\u200d\ufeff\u00a0\t\r\n ":
+        s = s.replace(ch, "")
+    return s
+
+
+def coze_config_problem():
+    """返回凭据的可读问题描述；返回空串表示配置可用。"""
+    pat = _clean_token(os.environ.get("COZE_PAT"))
+    if not pat:
+        return "未配置 COZE_PAT，当前只查本地知识卡。"
+    bad = [i for i, ch in enumerate(pat) if not 33 <= ord(ch) <= 126]
+    if bad:
+        return ("COZE_PAT 第 " + str(bad[0] + 1) + " 位起有 " + str(len(bad))
+                + " 个非英文字符，多半是粘贴了示例里的中文占位符；"
+                + "请在 Coze 控制台重新复制完整令牌（以 pat_ 开头，只含字母和数字）。")
+    if not _clean_token(os.environ.get("COZE_BOT_ID")):
+        return "未配置 COZE_BOT_ID，请填入发布到 API 渠道的 Bot ID。"
+    return ""
+
+
 def coze_available():
-    return bool((os.environ.get("COZE_PAT") or "").strip()
-                and (os.environ.get("COZE_BOT_ID") or "").strip())
+    return not coze_config_problem()
 
 
 def coze_engine():
-    return CozeEngine(os.environ.get("COZE_PAT", "").strip(),
-                      os.environ.get("COZE_BOT_ID", "").strip(),
-                      os.environ.get("COZE_BASE", "https://api.coze.cn"))
+    return CozeEngine(_clean_token(os.environ.get("COZE_PAT")),
+                      _clean_token(os.environ.get("COZE_BOT_ID")),
+                      (os.environ.get("COZE_BASE") or "https://api.coze.cn").strip())
 
 
 def engine_name():
@@ -849,12 +873,17 @@ def answer_question(question, sid="anon"):
     local_hit = not local.get("refused")
 
     if ENGINE_MODE != "coze" or not coze_available():
+        problem = "" if ENGINE_MODE == "local" else coze_config_problem()
         if local_hit:
             out = dict(local)
             out.update({"demo": False, "route": "local_card"})
+            if problem:
+                out["note"] = "在线模型没启用：" + problem
         else:
             out = {"refused": True, "answer": "", "citations": [], "reason": REFUSE_TEXT,
                    "demo": False, "route": "no_engine"}
+            if problem:
+                out["note"] = "在线模型没启用：" + problem
         out.update(_quota(sid))
         return out
 
@@ -945,6 +974,7 @@ class Handler(BaseHTTPRequestHandler):
             sid = re.sub(r"[^0-9a-zA-Z_-]", "", (qs.get("sid") or ["anon"])[0])[:64] or "anon"
             out = {"version": VERSION, "engine": engine_name(), "mode": ENGINE_MODE,
                    "coze_ready": coze_available(),
+                   "coze_problem": coze_config_problem(),
                    "last_error": _last_coze_error["msg"], "cards": len(CARDS),
                    "quiz": len(QUIZ), "chapters": CHAPTERS}
             out.update(_quota(sid))

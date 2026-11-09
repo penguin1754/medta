@@ -741,10 +741,11 @@ with st.sidebar:
             unsafe_allow_html=True,
         )
     else:
+        problem = core.coze_config_problem() or "在线模型没有启用，当前只查本地知识卡。"
         st.markdown(
             '<div class="side-panel"><div class="side-panel-label">在线问答</div>'
             '<div class="side-panel-value">本地模式</div>'
-            '<div class="side-panel-note">未配置 COZE_PAT，当前只查本地知识卡。</div></div>',
+            '<div class="side-panel-note">' + html.escape(problem) + '</div></div>',
             unsafe_allow_html=True,
         )
     st.markdown('<div class="side-divider"></div>', unsafe_allow_html=True)
