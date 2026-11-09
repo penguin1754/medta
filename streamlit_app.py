@@ -227,6 +227,7 @@ def _sid():
 def _ask(prompt):
     sid = _sid()
     st.session_state.messages.append({"role": "user", "content": prompt})
+    st.session_state["_scroll_to_chat"] = True
     with st.spinner("正在查课程资料并组织答案…"):
         result = core.answer_question(prompt, sid)
     if result.get("refused"):
@@ -259,7 +260,7 @@ def _render_messages():
 
 
 PANEL_META = {
-    "课程问答": ("课程问答", "只回答系统解剖学相关问题，优先依据课程资料；资料里没有的会明确说不知道。"),
+    "课程问答": ("课程问答", "把问题直接打在下面的输入框里。助教按课程资料回答并标出处；资料里没有的会明确说不知道。"),
     "知识点速记": ("知识点速记", "先自己回忆，再翻面核对；系统按间隔重复安排下一次复习。"),
     "自测练习": ("自测练习", "选择题即时判分；简答题按要点命中率打分，同一份作答结果永远一致。"),
     "考前冲刺": ("考前冲刺", "填考试日期，按还没掌握的张数除以剩余天数，倒排每天的复习量。"),
@@ -275,30 +276,77 @@ def _reset_scroll_on_nav(panel):
     components.html(
         """<script>
 const doc = window.parent.document;
+const win = window.parent;
 let ticks = 0;
-const toTop = () => {
-  const box = doc.querySelector('[data-testid="stAppScrollToBottomContainer"]');
+const settle = () => {
+  const box = doc.querySelector('[data-testid="stAppScrollToBottomContainer"], [data-testid="stMain"]');
   if (box) box.scrollTop = 0;
-  if (++ticks < 14) setTimeout(toTop, 80);
+  if (win.innerWidth <= 900) {
+    const sb = doc.querySelector('[data-testid="stSidebar"]');
+    if (sb && sb.getAttribute("data-collapsed") !== "true") {
+      const btn = sb.querySelector('[data-testid="stSidebarCollapseButton"] button');
+      if (btn) btn.click();
+    }
+  }
+  if (++ticks < 10) win.setTimeout(settle, 100);
 };
-toTop();
+settle();
 </script>""",
         height=0,
     )
 
 
-def _page_header(panel, sid):
-    """页面顶栏和学习快照；数据来自本地学习记录，不调用模型。"""
-    title, lede = PANEL_META[panel]
+def _hero_metric(label, value, unit, note, dark=False):
+    return (
+        '<div class="hero-metric' + (' dark' if dark else '') + '">'
+        '<div class="hero-metric-label">' + html.escape(label) + '</div>'
+        '<div class="hero-metric-line"><div class="hero-metric-value">' + html.escape(value)
+        + ('<small>' + html.escape(unit) + '</small>' if unit else '') + '</div></div>'
+        '<div class="hero-metric-note">' + html.escape(note) + '</div></div>'
+    )
+
+
+def _hero_panel(panel, sid):
+    """每个模块只放和自己有关的数据，避免五页都是同一组卡片。"""
+    if panel == "课程问答":
+        return (
+            '<div class="hero-ask">'
+            '<div class="hero-ask-label">助教能回答</div>'
+            '<div class="hero-ask-item"><b>概念</b><span>定义、分型、毗邻关系</span></div>'
+            '<div class="hero-ask-item"><b>结构</b><span>走行、分支、支配范围</span></div>'
+            '<div class="hero-ask-item"><b>损伤</b><span>典型表现与常考部位</span></div>'
+            '<div class="hero-ask-note">回答优先引用课程资料，并标出处</div>'
+            '</div>'
+        )
     prof = core.STORE.profile(sid)
+    ov = prof["overview"]
     plan = core.STORE.sprint(sid)
-    overview = prof["overview"]
-    total = max(1, int(overview["cards_total"]))
-    mastered = int(overview["mastered"])
-    pct = int(round(100 * mastered / total))
-    due = int(overview["due"])
-    days_left = int(plan["days_left"])
-    daily_cards = int(plan["daily_cards"])
+    total = max(1, int(ov["cards_total"]))
+    if panel == "知识点速记":
+        return (_hero_metric("今日到期", str(int(ov["due"])), "张", "到期就复习，不用等")
+                + _hero_metric("已掌握", str(int(ov["mastered"])), "/ " + str(total) + " 张",
+                               "按间隔重复往后排", dark=True))
+    if panel == "自测练习":
+        return (_hero_metric("已答题", str(int(ov["answered"])), "道", "选择和简答都计入")
+                + _hero_metric("正确率", str(int(ov["accuracy"])), "%",
+                               "答错自动进复习清单", dark=True))
+    if panel == "考前冲刺":
+        remaining = int(plan["remaining"])
+        status = "已过完" if remaining == 0 else ("跟得上" if plan["feasible"] else "偏紧")
+        note = "按剩余天数倒排" if plan["feasible"] else "超过每天 60 张，建议只保重点章"
+        pace = "0.0" if remaining == 0 else ("%.1f" % float(plan["pace"]))
+        return (_hero_metric("当前节奏", status, "", note)
+                + _hero_metric("日均需掌握", pace, "张", "断一天不用补，次日重算", dark=True))
+    week = prof["activity"][-7:]
+    active_days = sum(1 for a in week if int(a["n"]) > 0)
+    return (_hero_metric("最近 7 天", str(active_days), "天", "有学习记录的天数")
+            + _hero_metric("累计动作", str(int(ov["events"])), "次",
+                           "翻卡、答题、提问都算", dark=True))
+
+
+def _page_header(panel, sid):
+    """页面顶栏；右侧只展示本模块自己的数据。"""
+    title, lede = PANEL_META[panel]
     st.markdown(
         '<div class="app-topbar">'
         '<div class="app-context">系统解剖学 / ' + html.escape(title) + '</div>'
@@ -307,45 +355,43 @@ def _page_header(panel, sid):
         '<section class="page-hero">'
         '<div class="page-hero-copy"><h1>' + html.escape(title) + '</h1>'
         '<p>' + html.escape(lede) + '</p></div>'
-        '<div class="hero-metrics">'
-        '<div class="hero-metric"><div class="hero-metric-label">今日待复习</div>'
-        '<div class="hero-metric-line"><div class="hero-metric-value">' + str(due)
-        + '<small>张卡</small></div></div>'
-        '<div class="hero-metric-note">已掌握 ' + str(mastered) + ' 张</div></div>'
-        '<div class="hero-metric"><div class="hero-metric-label">掌握度</div>'
-        '<div class="hero-metric-line"><div class="hero-metric-value">' + str(pct)
-        + '<small>%</small></div><div class="hero-ring" style="--value:' + str(pct)
-        + '%"></div></div>'
-        '<div class="hero-metric-note">' + str(mastered) + ' / ' + str(total) + ' 张知识卡</div></div>'
-        '<div class="hero-metric dark"><div class="hero-metric-label">距离考试</div>'
-        '<div class="hero-metric-line"><div class="hero-metric-value">' + str(days_left)
-        + '<small>天</small></div></div>'
-        '<div class="hero-metric-note">每天约 ' + str(daily_cards) + ' 张，按日期倒排</div></div>'
-        '</div></section>',
+        '<div class="hero-metrics">' + _hero_panel(panel, sid) + '</div>'
+        '</section>',
         unsafe_allow_html=True,
     )
-
 
 def page_ask():
     if "messages" not in st.session_state:
         st.session_state.messages = []
     if st.session_state.pop("pending_q", None):
         _ask(st.session_state.pop("_pending_text"))
-    with st.container(key="ask_chips"):
-        cols = st.columns(len(QUESTIONS))
-        for i, (text, col) in enumerate(zip(QUESTIONS, cols)):
-            if col.button(text, key="chip" + str(i), use_container_width=True):
-                st.session_state.pending_q = True
-                st.session_state._pending_text = text
-                st.rerun()
+    with st.container(key="ask_composer"):
+        st.markdown(
+            '<div class="composer-label">直接输入问题</div>'
+            '<div class="composer-hint">概念、结构、损伤表现都可以问，回答带出处</div>',
+            unsafe_allow_html=True,
+        )
+        prompt = st.chat_input("例如：腋神经损伤会有什么表现？")
+        if prompt:
+            _ask(prompt)
+            st.rerun()
     if not st.session_state.messages:
-        st.info("先点上面一个问题，或在下面输入框里提问。")
+        st.markdown('<div class="section-label">试试这些问题</div>', unsafe_allow_html=True)
+        with st.container(key="ask_chips"):
+            cols = st.columns(len(QUESTIONS))
+            for i, (text, col) in enumerate(zip(QUESTIONS, cols)):
+                if col.button(text, key="chip" + str(i), use_container_width=True):
+                    st.session_state.pending_q = True
+                    st.session_state._pending_text = text
+                    st.rerun()
+    if not st.session_state.messages:
+        st.markdown(
+            '<div class="ask-empty"><b>还没有提问</b>'
+            '<span>在上面的输入框打字，或点一个示例问题。</span></div>',
+            unsafe_allow_html=True,
+        )
     _render_messages()
-    prompt = st.chat_input("问一个系统解剖学问题…")
-    if prompt:
-        _ask(prompt)
-        st.rerun()
-
+    _maybe_scroll_to_chat()
 
 def _flip_card_html(card, revealed):
     """整张卡一次渲染出正反两面，靠 CSS 三维翻转过去；高度由较高的一面决定。"""
@@ -693,6 +739,26 @@ with st.sidebar:
     st.markdown('<div class="side-privacy">学习记录只保存在这台服务器，用匿名 sid 区分。</div>',
                 unsafe_allow_html=True)
 
+def _maybe_scroll_to_chat():
+    """问完自动滚到最新一条回答；同一页的其他操作不打扰。"""
+    if not st.session_state.pop("_scroll_to_chat", False):
+        return
+    components.html(
+        """<script>
+const doc = window.parent.document;
+const win = window.parent;
+const smooth = win.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+let n = 0;
+const go = () => {
+  const msgs = doc.querySelectorAll('[data-testid="stChatMessage"]');
+  if (msgs.length) msgs[msgs.length - 1].scrollIntoView({block: "end", behavior: smooth});
+  if (++n < 3) win.setTimeout(go, 300);
+};
+go();
+</script>""",
+        height=0,
+    )
+
 _page_header(panel, sid)
 
 if panel == "课程问答":
@@ -705,7 +771,52 @@ elif panel == "考前冲刺":
     page_sprint()
 else:
     page_profile()
+def _install_mobile_ui():
+    """手机上点完导航自动收起抽屉，点空白处或按 Esc 也能关。"""
+    components.html(
+        """<script>
+const doc = window.parent.document;
+const win = window.parent;
+if (!doc.__medtaMobileUi) {
+  doc.__medtaMobileUi = true;
+  const isMobile = () => win.matchMedia("(max-width: 900px)").matches;
+  const closeDrawer = () => {
+    const sb = doc.querySelector('[data-testid="stSidebar"]');
+    if (!sb || sb.getAttribute("data-collapsed") === "true") return;
+    const btn = sb.querySelector('[data-testid="stSidebarCollapseButton"] button');
+    if (btn) btn.click();
+  };
+  doc.addEventListener("click", (ev) => {
+    if (!isMobile()) return;
+    const sb = doc.querySelector('[data-testid="stSidebar"]');
+    if (!sb || sb.getAttribute("data-collapsed") === "true") return;
+    const t = ev.target;
+    if (sb.contains(t)) {
+      return;
+    }
+    if (!(t.closest && t.closest('[data-testid="stExpandSidebarButton"]'))) closeDrawer();
+  }, true);
+  doc.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && isMobile()) closeDrawer();
+  });
+}
+</script>""",
+        height=0,
+    )
 
 _reset_scroll_on_nav(panel)
+_install_mobile_ui()
+
+
+
+
+
+
+
+
+
+
+
+
 
 

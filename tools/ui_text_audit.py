@@ -32,14 +32,17 @@ def go(pg, name, mobile):
         pg.locator('[data-testid=stExpandSidebarButton]').click(); pg.wait_for_timeout(800)
     pg.locator('[data-testid="stSidebar"] [role=radiogroup] label').filter(has_text=name).first.click(); pg.wait_for_timeout(1500)
     if mobile:
-        pg.locator('[data-testid=stSidebarCollapseButton] button').click(); pg.wait_for_timeout(600)
+        btn = pg.locator('[data-testid=stSidebarCollapseButton] button')
+        if btn.count() and btn.first.is_visible():
+            btn.first.click(); pg.wait_for_timeout(600)
+        pg.wait_for_timeout(400)
 
 with sync_playwright() as p:
     b = p.chromium.launch(executable_path=CHROME)
     for w, h in [(390, 844), (1440, 960)]:
         pg = b.new_page(viewport={"width": w, "height": h})
         pg.goto(URL, wait_until="networkidle", timeout=60000); pg.wait_for_timeout(3000)
-        print("==", w, "initial scroll", pg.evaluate("document.querySelector('[data-testid=stAppScrollToBottomContainer]').scrollTop"))
+        print("==", w, "initial scroll", pg.evaluate("(document.querySelector('[data-testid=stAppScrollToBottomContainer]')||document.querySelector('[data-testid=stMain]')).scrollTop"))
         for name in ["课程问答", "知识点速记", "自测练习", "考前冲刺", "学习档案"]:
             go(pg, name, w < 900)
             r = pg.evaluate(CLIP_JS)
@@ -48,3 +51,5 @@ with sync_playwright() as p:
                 print("   chatinput", pg.locator('[data-testid=stChatInput]').first.bounding_box())
         pg.close()
     b.close()
+
+
