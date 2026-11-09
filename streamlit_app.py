@@ -60,6 +60,17 @@ def _pat_fp():
 
 import backend.app as core  # noqa: E402  （必须先注入 Secrets 再导入）
 
+# Streamlit Cloud 部署时可能只替换脚本、不重载已导入的 backend 模块，
+# 这里对新增接口做兜底，避免新旧代码混跑时整页崩掉。
+QUIZ_CHAPTERS = getattr(core, "QUIZ_CHAPTERS", None) or sorted({q["chapter"] for q in core.QUIZ})
+
+
+def coze_problem():
+    fn = getattr(core, "coze_config_problem", None)
+    if fn:
+        return fn()
+    return "" if core.coze_available() else "未配置 COZE_PAT，当前只查本地知识卡。"
+
 
 LEGACY_CSS = """
 <style>
@@ -496,7 +507,7 @@ def _quiz_choice():
     sid = _sid()
     with st.container(key="quiz_filters"):
         c1, c2, c3 = st.columns([2, 1, 1])
-        chapter = c1.selectbox("章节", ["全部"] + list(core.QUIZ_CHAPTERS), key="quiz_chapter")
+        chapter = c1.selectbox("章节", ["全部"] + list(QUIZ_CHAPTERS), key="quiz_chapter")
         n = c2.number_input("题量", 1, 20, 4, key="quiz_n")
         if c3.button("换一组", use_container_width=True):
             pool = [q for q in core.QUIZ if chapter == "全部" or q["chapter"] == chapter]
@@ -746,7 +757,7 @@ with st.sidebar:
             unsafe_allow_html=True,
         )
     else:
-        problem = core.coze_config_problem() or "在线模型没有启用，当前只查本地知识卡。"
+        problem = coze_problem() or "在线模型没有启用，当前只查本地知识卡。"
         st.markdown(
             '<div class="side-panel"><div class="side-panel-label">在线问答</div>'
             '<div class="side-panel-value">本地模式</div>'
@@ -759,6 +770,9 @@ with st.sidebar:
         st.session_state.messages = []
         st.rerun()
     st.markdown('<div class="side-privacy">学习记录只保存在这台服务器，用匿名 sid 区分。</div>',
+                unsafe_allow_html=True)
+    st.markdown('<div class="side-privacy">题库 ' + str(len(core.QUIZ)) + " 题 · 知识卡 "
+                + str(len(core.CARDS)) + " 张 · 简答 " + str(len(core.SA)) + " 道</div>",
                 unsafe_allow_html=True)
 
 def _maybe_scroll_to_chat():
