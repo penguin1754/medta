@@ -11,6 +11,7 @@ Streamlit Community Cloud：
 from __future__ import annotations
 
 import html
+import hashlib
 import os
 import secrets
 import sys
@@ -47,6 +48,14 @@ def _load_secrets():
 
 
 _load_secrets()
+
+
+def _pat_fp():
+    """令牌指纹：只用于对照本地与云端是不是同一个令牌，不暴露令牌本身。"""
+    pat = (os.environ.get("COZE_PAT") or "").strip()
+    if not pat:
+        return "<未配置>"
+    return hashlib.sha256(pat.encode("utf-8")).hexdigest()[:8] + " / 长度 " + str(len(pat))
 
 import backend.app as core  # noqa: E402  （必须先注入 Secrets 再导入）
 
@@ -240,6 +249,7 @@ def _ask(prompt):
         "meta": ROUTE_TEXT.get(result.get("route"), ""),
         "cites": result.get("citations") or [],
         "note": result.get("note") or "",
+        "dbg": result.get("error") or "",
     })
 
 
@@ -257,6 +267,12 @@ def _render_messages():
                 st.caption(msg["note"])
             if msg.get("meta"):
                 st.caption(msg["meta"])
+            if msg.get("dbg"):
+                with st.expander("技术详情（排查用）"):
+                    st.code(str(msg["dbg"]), language="text")
+                    st.caption("COZE_BASE=" + str(os.environ.get("COZE_BASE") or "https://api.coze.cn")
+                               + " · COZE_BOT_ID=" + str(os.environ.get("COZE_BOT_ID") or "")
+                               + " · 令牌指纹 " + _pat_fp())
 
 
 PANEL_META = {
