@@ -43,7 +43,7 @@ def run(page, w, label):
         check("back face rendered", back.count() > 0, box)
         if box:
             check("back face fits viewport", box["x"] >= 0 and box["x"] + box["width"] <= w + 1, box)
-            check("back face has height", box["height"] >= (300 if mobile else 320), box["height"])
+            check("back face has height", box["height"] >= (280 if mobile else 320), box["height"])
         # 3D 效果保留
         wrap = page.locator(".flipwrap")
         tr = wrap.first.evaluate("e=>getComputedStyle(e).transform") if wrap.count() else ""

@@ -13,6 +13,7 @@ from __future__ import annotations
 import html
 import hashlib
 import os
+import random
 import secrets
 import sys
 from datetime import date, timedelta
@@ -495,16 +496,17 @@ def _quiz_choice():
     sid = _sid()
     with st.container(key="quiz_filters"):
         c1, c2, c3 = st.columns([2, 1, 1])
-        chapter = c1.selectbox("章节", ["全部"] + list(core.CHAPTERS), key="quiz_chapter")
+        chapter = c1.selectbox("章节", ["全部"] + list(core.QUIZ_CHAPTERS), key="quiz_chapter")
         n = c2.number_input("题量", 1, 20, 4, key="quiz_n")
         if c3.button("换一组", use_container_width=True):
             pool = [q for q in core.QUIZ if chapter == "全部" or q["chapter"] == chapter]
-            st.session_state.quiz_items = pool[:int(n)]
+            k = min(int(n), len(pool))
+            st.session_state.quiz_items = random.sample(pool, k) if pool else []
             st.session_state.quiz_i = 0
             st.session_state.quiz_result = None
             st.rerun()
     if "quiz_items" not in st.session_state:
-        st.session_state.quiz_items = list(core.QUIZ)[:4]
+        st.session_state.quiz_items = random.sample(list(core.QUIZ), min(4, len(core.QUIZ)))
         st.session_state.quiz_i = 0
         st.session_state.quiz_result = None
     items = st.session_state.quiz_items
@@ -704,7 +706,10 @@ def page_profile():
                     + " 至 " + acts[-1]["date"][5:]
                     + "　颜色越深，当天练习越多</span></div>", unsafe_allow_html=True)
     with st.expander("资料来源与合规说明"):
-        st.write("当前内容为占位示例，正式提交前必须替换为团队审核后的系统解剖学资料。"
+        st.write("题库与知识点来自团队资料《系统解剖学 题库完整版1033题》《重点考点及答案》，"
+                 "用 OCR 抽取后入库：已在线的有 " + str(len(core.QUIZ)) + " 道选择题/判断题、"
+                 + str(len(core.CARDS)) + " 张知识卡、"
+                 + str(len(core.SA)) + " 道简答题。个别字词可能识别有误，以教材原文为准。"
                  "系统不采集姓名与学号，也不访问学校任何系统。")
         for card in core.CARDS:
             src = card.get("source") or {}

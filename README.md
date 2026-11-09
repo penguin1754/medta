@@ -151,8 +151,13 @@ Coze 免费额度有限，所以有三道闸：
 ## 目录
 
     backend/app.py        后端 + 引擎适配器（换在线模型只动 CozeEngine 这个类）
-    knowledge/cards.json  知识卡（当前为占位示例，必须换成团队审核后的内容）
-    knowledge/quiz.json   自测题（同上）
+    knowledge/cards.json  知识卡（来自题库名词解释与考点问答，OCR 抽取后人工抽查）
+    knowledge/quiz.json   自测题（题库 1033 题中的单选、判断题，共 577 道）
+    knowledge/short_answer.json  简答题（题库问答题 + 要点词判分）
+    knowledge/_ocr/       OCR 原始文本与解析中间产物（不入库）
+    tools/ocr_bank.py     题库 PDF -> 逐页 OCR 文本（可断点续跑）
+    tools/parse_bank.py   OCR 文本 -> 题目结构化 JSON
+    tools/build_quiz_from_bank.py / build_cards.py / build_sa.py  生成三份上线数据
     frontend/index.html   单页应用（零依赖单文件，断网可演示）
     docs/screenshots/     真实渲染截图（申报表 / 答辩可用）
     tools/smoke_test.py   接口冒烟测试（自起后端、打一轮接口、断言结果）

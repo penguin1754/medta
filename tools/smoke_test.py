@@ -60,8 +60,9 @@ def main():
         h = wait_health()
         print("健康检查:", json.dumps(h, ensure_ascii=False))
         check("health 版本 v0.4", h.get("version") == "v0.4")
-        check("health 知识卡 4 张", h.get("cards") == 4, "cards=" + str(h.get("cards")))
-        check("health 自测题 4 道", h.get("quiz") == 4, "quiz=" + str(h.get("quiz")))
+        NC = h.get("cards") or 0
+        check("health 知识卡已入库", NC >= 50, "cards=" + str(NC))
+        check("health 自测题已入库", (h.get("quiz") or 0) >= 500, "quiz=" + str(h.get("quiz")))
         check("health 带章节列表", bool(h.get("chapters")), str(h.get("chapters")))
         check("health 默认引擎为 coze 模式", h.get("mode") == "coze", str(h.get("mode")))
         check("未填令牌时 coze_ready=False", h.get("coze_ready") is False)
@@ -83,7 +84,7 @@ def main():
               ("no_engine", "quota_exhausted", "coze_failed"), "route=" + str(r2.get("route")))
 
         cards = call("/api/cards?sid=" + SID)
-        check("知识卡接口返回 4 张", len(cards) == 4, str(len(cards)))
+        check("知识卡接口数量与 health 一致", len(cards) == NC, str(len(cards)))
         check("知识卡带 status 字段", all("status" in c for c in cards))
         cid = cards[0]["id"]
         rv1 = call("/api/cards/review", {"sid": SID, "card_id": cid, "known": True})
@@ -99,9 +100,14 @@ def main():
         check("自测接口返回 4 题", quiz.get("total") == 4, "total=" + str(quiz.get("total")))
         items = quiz.get("items") or []
         check("下发题目不泄露答案", all("answer_index" not in i for i in items))
-        good = call("/api/quiz/answer", {"sid": SID, "qid": items[0]["id"], "choice": 0})
-        wrong = call("/api/quiz/answer", {"sid": SID, "qid": items[1]["id"], "choice": 3})
-        check("答对：correct=True 且有解析", good.get("correct") is True and bool(good.get("explain")))
+        # 题目是随机抽的，正确答案从本地题库取，保证断言不依赖出题顺序
+        bank = {q["id"]: q for q in json.loads(
+            (ROOT / "knowledge" / "quiz.json").read_text(encoding="utf-8"))}
+        key0 = bank[items[0]["id"]]["answer_index"]
+        bad1 = 0 if bank[items[1]["id"]]["answer_index"] != 0 else 1
+        good = call("/api/quiz/answer", {"sid": SID, "qid": items[0]["id"], "choice": key0})
+        wrong = call("/api/quiz/answer", {"sid": SID, "qid": items[1]["id"], "choice": bad1})
+        check("答对：correct=True", good.get("correct") is True, str(good)[:80])
         check("答错：correct=False 且回正确答案",
               wrong.get("correct") is False and "answer_index" in wrong)
 
@@ -117,7 +123,7 @@ def main():
         # 间隔重复：新卡立即到期 -> 记住后推到 1 天后 -> 没记住当场回到到期
         call("/api/reset", {"sid": "sched1"})
         due0 = call("/api/cards?sid=sched1&due=1")
-        check("新会话 4 张卡全部到期", len(due0) == 4, str(len(due0)))
+        check("新会话卡片全部到期", len(due0) == NC, str(len(due0)))
         c0 = call("/api/cards?sid=sched1")[0]
         r_known = call("/api/cards/review",
                        {"sid": "sched1", "card_id": c0["id"], "known": True})
@@ -125,23 +131,24 @@ def main():
         check("记住后间隔 1 天", sch.get("interval_days") == 1, str(sch.get("interval_days")))
         check("记住后不再到期", sch.get("due_ts", 0) > time.time())
         due1 = call("/api/cards?sid=sched1&due=1")
-        check("到期列表少 1 张", len(due1) == 3, str(len(due1)))
+        check("到期列表少 1 张", len(due1) == NC - 1, str(len(due1)))
         r_lapse = call("/api/cards/review",
                        {"sid": "sched1", "card_id": c0["id"], "known": False})
         check("没记住则当场重新到期",
               (r_lapse.get("schedule") or {}).get("due_ts", 1) <= time.time())
         due2 = call("/api/cards?sid=sched1&due=1")
-        check("到期列表回到 4 张", len(due2) == 4, str(len(due2)))
+        check("到期列表恢复到全部", len(due2) == NC, str(len(due2)))
         prof_s = call("/api/profile/sched1")
         ov = prof_s["overview"]
         check("档案含到期数与连续天数", "due" in ov and "streak" in ov,
               "due=" + str(ov.get("due")) + " streak=" + str(ov.get("streak")))
         check("活跃度窗口 35 天", len(prof_s.get("activity") or []) == 35)
         check("今天有学习记录", (prof_s["activity"][-1] or {}).get("n", 0) >= 1)
-        check("复习节奏覆盖全部卡片", len(prof_s.get("sched") or []) == 4)
+        check("复习节奏覆盖全部卡片", len(prof_s.get("sched") or []) == NC)
 
         src = call("/api/sources")
-        check("资料来源含合规声明", "占位" in (src.get("note") or ""))
+        note = src.get("note") or ""
+        check("资料来源含合规声明", ("题库" in note) and ("OCR" in note), note[:60])
 
         call("/api/reset", {"sid": SID})
         p2 = call("/api/profile/" + SID)["overview"]

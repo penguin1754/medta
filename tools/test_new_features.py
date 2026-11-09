@@ -6,6 +6,7 @@
     $env:PYTHONIOENCODING="utf-8"; python tools/test_new_features.py
 """
 import sys
+from datetime import date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -45,12 +46,17 @@ def test_sprint():
     check("今日清单不超过每日配额", len(plan["today"]) <= max(1, plan["daily_cards"]),
           len(plan["today"]))
     check("待掌握数等于卡片总数（新用户）", plan["remaining"] == len(core.CARDS))
-    check("预览逐日递减到 0", [d["left_after"] for d in plan["preview"]][-1] == 0)
+    lefts = [d["left_after"] for d in plan["preview"]]
+    check("预览逐日不增且不为负", all(b <= a for a, b in zip(lefts, lefts[1:])) and lefts[-1] >= 0,
+          lefts)
+    if len(core.CARDS) <= plan["daily_cards"] * len(lefts):
+        check("题目少时预览能清零", lefts[-1] == 0, lefts[-1])
     check("考试日期被记住", core.STORE.exam_date(sid) == "2026-12-20")
 
-    core.STORE.set_exam(sid, "2026-11-03")
+    core.STORE.set_exam(sid, (date.today() + timedelta(days=1)).isoformat())
     tight = core.STORE.sprint(sid)
-    check("只剩 1 天时每天要学完全部", tight["daily_cards"] == len(core.CARDS), tight["daily_cards"])
+    check("只剩 1 天时按每日上限学", tight["daily_cards"] == min(60, len(core.CARDS)),
+          tight["daily_cards"])
 
     core.STORE.reset(sid)
     for card in core.CARDS:

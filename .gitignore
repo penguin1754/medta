@@ -6,6 +6,13 @@ __pycache__/
 .streamlit/secrets.toml
 .venv/
 *.log
+*.log.err
+*.bak
+.tmp/
+.probe_header.py
+
+# OCR 中间产物：题库原文与逐页文本，可被 tools/ocr_bank.py 重新生成
+knowledge/_ocr/
 
 # 原始扫描件体积大且为第三方资料，不入库
 data_in/*.pdf

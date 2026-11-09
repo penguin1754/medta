@@ -109,9 +109,11 @@ SA = _load_optional("short_answer.json")
 CARD_BY_ID = {c["id"]: c for c in CARDS}
 CARD_BY_POINT = {c["point_id"]: c for c in CARDS}
 QUIZ_BY_ID = {q["id"]: q for q in QUIZ}
+QUIZ_BY_POINT = {q["point_id"]: q for q in QUIZ}
 SA_BY_ID = {s["id"]: s for s in SA}
 SA_CHAPTERS = sorted({s["chapter"] for s in SA})
 CHAPTERS = sorted({c["chapter"] for c in CARDS})
+QUIZ_CHAPTERS = sorted({q["chapter"] for q in QUIZ})
 
 
 _PUNCT = "　 \t\r\n，。、；：？！“”‘’（）()《》〈〉…—·,.;:?!\"'`~@#$%^&*_+=|\\/[]{}<>"
@@ -528,12 +530,14 @@ class Store:
         plan = []
         for g in open_gaps:
             card = CARD_BY_POINT.get(g["point_id"])
+            quiz_item = QUIZ_BY_POINT.get(g["point_id"])
+            src = (card or {}).get("source") or (quiz_item or {}).get("source")
             plan.append({
                 "gap": g["label"],
                 "chapter": g["chapter"],
                 "action": ("先看知识卡「" + card["front"] + "」，再回自测练习重做对应题目。")
                           if card else "复习该知识点，然后在自测练习里重做对应题目。",
-                "source": card["source"] if card else None,
+                "source": src,
             })
 
         now = _now()
@@ -593,7 +597,7 @@ class Store:
 
     def reset(self, sid):
         with _lock:
-            for t in ("events", "gaps", "card_state", "quiz_state"):
+            for t in ("events", "gaps", "card_state", "quiz_state", "sa_state"):
                 self.conn.execute("delete from " + t + " where sid=?", (sid,))
             self.conn.execute("delete from chat_state where sid=?", (sid,))
             self.conn.commit()
@@ -1029,7 +1033,8 @@ class Handler(BaseHTTPRequestHandler):
                                      "locators": []})
                 d["quiz"] += 1
             self._send({"docs": list(docs.values()),
-                        "note": "本原型内容为占位示例，正式提交前必须替换为团队整理的课程复习资料。"
+                        "note": "题库与知识点来自《系统解剖学 题库完整版1033题》《重点考点及答案》等团队资料，"
+                                "由 OCR 抽取入库，个别字词可能识别有误，以教材原文为准。"
                                 "系统不采集姓名与学号，也不需要访问学校任何系统。"})
             return
         m = re.fullmatch(r"/api/profile/([0-9a-zA-Z_-]{1,64})", path)
